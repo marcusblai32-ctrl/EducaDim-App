@@ -274,3 +274,140 @@ String formatDate(DateTime? d) {
   String two(int n) => n.toString().padLeft(2, '0');
   return '${two(d.day)}/${two(d.month)}/${d.year} ${two(d.hour)}:${two(d.minute)}';
 }
+
+// ---------------- Quiz ----------------
+
+class QuizSummary {
+  QuizSummary(this.id, this.titre, this.description, this.niveau, this.duree,
+      this.passPct, this.questions, this.compatible, this.bestScore, this.passed);
+  final int id, duree, passPct, questions;
+  final String titre, description, niveau;
+  final bool compatible, passed;
+  final double? bestScore;
+  static List<QuizSummary> listFromJson(dynamic j) => _l(_m(j)['quizzes'])
+      .map((q) => QuizSummary(
+            _i(_m(q), 'id') ?? 0,
+            _s(_m(q), 'titre') ?? '',
+            _s(_m(q), 'description') ?? '',
+            _s(_m(q), 'niveau') ?? 'cours',
+            _i(_m(q), 'duree_quiz') ?? 15,
+            _i(_m(q), 'pourcentage_reussite') ?? 70,
+            _i(_m(q), 'questions_count') ?? 0,
+            _b(_m(q), 'mobile_compatible'),
+            _m(q)['best_score'] is num ? (_m(q)['best_score'] as num).toDouble() : null,
+            _b(_m(q), 'passed'),
+          ))
+      .toList();
+}
+
+class QuizChoice {
+  QuizChoice(this.id, this.texte);
+  final int id;
+  final String texte;
+}
+
+class QuizQuestion {
+  QuizQuestion(this.id, this.type, this.supported, this.texte, this.points, this.image,
+      this.audio, this.video, this.mediaTexte, this.choices);
+  final int id, points;
+  final String type, texte;
+  final bool supported;
+  final String? image, audio, video, mediaTexte;
+  final List<QuizChoice> choices;
+
+  bool get isChoice => type == 'single' || type == 'vrai_faux' || type == 'multiple';
+  bool get isMultiple => type == 'multiple';
+}
+
+class QuizDetail {
+  QuizDetail(this.id, this.titre, this.description, this.duree, this.passPct,
+      this.courseId, this.compatible, this.questions);
+  final int id, duree, passPct;
+  final int? courseId;
+  final String titre, description;
+  final bool compatible;
+  final List<QuizQuestion> questions;
+
+  factory QuizDetail.fromJson(dynamic j) {
+    final m = _m(j);
+    return QuizDetail(
+      _i(m, 'id') ?? 0,
+      _s(m, 'titre') ?? '',
+      _s(m, 'description') ?? '',
+      _i(m, 'duree_quiz') ?? 15,
+      _i(m, 'pourcentage_reussite') ?? 70,
+      _i(m, 'course_id'),
+      _b(m, 'mobile_compatible'),
+      _l(m['questions']).map((q) {
+        final qm = _m(q);
+        final media = _m(qm['media']);
+        return QuizQuestion(
+          _i(qm, 'id') ?? 0,
+          _s(qm, 'type') ?? '',
+          _b(qm, 'supported'),
+          _s(qm, 'texte') ?? '',
+          _i(qm, 'points') ?? 1,
+          _s(media, 'image'),
+          _s(media, 'audio'),
+          _s(media, 'video'),
+          _s(media, 'texte'),
+          _l(qm['reponses'])
+              .map((r) => QuizChoice(_i(_m(r), 'id') ?? 0, _s(_m(r), 'texte') ?? ''))
+              .toList(),
+        );
+      }).toList(),
+    );
+  }
+}
+
+class QuizAttempt {
+  QuizAttempt(this.attemptId, this.quizId, this.expiresAt, this.resumed);
+  final int attemptId, quizId;
+  final DateTime? expiresAt;
+  final bool resumed;
+  factory QuizAttempt.fromJson(dynamic j) {
+    final m = _m(j);
+    return QuizAttempt(_i(m, 'attempt_id') ?? 0, _i(m, 'quiz_id') ?? 0,
+        DateTime.tryParse(_s(m, 'expires_at') ?? '')?.toLocal(), _b(m, 'resumed'));
+  }
+}
+
+class QuestionResult {
+  QuestionResult(this.questionId, this.correct, this.explication);
+  final int questionId;
+  final bool? correct; // null = correction manuelle
+  final String? explication;
+}
+
+class QuizResult {
+  QuizResult(this.attemptId, this.quizId, this.submitted, this.score, this.reussi,
+      this.passPct, this.details);
+  final int attemptId, quizId, passPct;
+  final bool submitted;
+  final double? score;
+  final bool? reussi;
+  final List<QuestionResult> details;
+
+  factory QuizResult.fromJson(dynamic j) {
+    final m = _m(j);
+    return QuizResult(
+      _i(m, 'attempt_id') ?? 0,
+      _i(m, 'quiz_id') ?? 0,
+      _b(m, 'submitted'),
+      m['score'] is num ? (m['score'] as num).toDouble() : null,
+      m['reussi'] is bool ? m['reussi'] as bool : null,
+      _i(m, 'pourcentage_reussite') ?? 70,
+      _l(m['details'])
+          .map((d) => QuestionResult(_i(_m(d), 'question_id') ?? 0,
+              _m(d)['correct'] is bool ? _m(d)['correct'] as bool : null, _s(_m(d), 'explication')))
+          .toList(),
+    );
+  }
+}
+
+/// Contexte passé à l'écran de passage du quiz.
+class QuizRun {
+  QuizRun(this.quiz, this.attempt);
+  final QuizDetail quiz;
+  final QuizAttempt attempt;
+}

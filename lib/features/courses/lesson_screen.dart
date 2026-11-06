@@ -47,12 +47,13 @@ class _LessonScreenState extends State<LessonScreen> {
               return EmptyState(
                 icon: Icons.quiz_outlined,
                 title: 'Quiz à réussir d’abord',
-                message: '${err.message}\nLes quiz ne sont pas encore disponibles '
-                    'dans l’application : passez-le sur le site EducaDim.',
+                message: err.message,
                 action: FilledButton(
-                  onPressed: () => launchUrl(Uri.parse(ApiConfig.siteUrl),
-                      mode: LaunchMode.externalApplication),
-                  child: const Text('Ouvrir le site'),
+                  onPressed: () => err.quizIds.isNotEmpty
+                      ? context.push('/quiz/${err.quizIds.first}')
+                      : launchUrl(Uri.parse(ApiConfig.siteUrl),
+                          mode: LaunchMode.externalApplication),
+                  child: Text(err.quizIds.isNotEmpty ? 'Passer le quiz' : 'Ouvrir le site'),
                 ),
               );
             }

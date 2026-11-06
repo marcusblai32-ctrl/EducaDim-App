@@ -37,13 +37,18 @@ ResponseBody _json(Object body, int status) => ResponseBody.fromString(
 
 void main() {
   sqfliteFfiInit();
+  late AppDatabase db;
   late CacheStore cache;
 
   setUp(() async {
-    final db = await AppDatabase.open(
+    db = await AppDatabase.open(
         path: inMemoryDatabasePath, factory: databaseFactoryFfi);
     cache = CacheStore(db);
   });
+
+  // Sans fermeture, sqflite réutilise la même base mémoire entre les tests
+  // (singleInstance) et le cache d'un test pollue le suivant.
+  tearDown(() => db.close());
 
   CourseRepository repo(ResponseBody Function(RequestOptions) h) {
     final dio = Dio(BaseOptions(baseUrl: 'https://t/api/v1/'))

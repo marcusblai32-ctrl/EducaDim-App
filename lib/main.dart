@@ -32,7 +32,7 @@ Future<void> main() async {
 
   final outbox = OutboxRepository(db);
   // Progression -> endpoint réel ; chat -> pas d'endpoint (reste en attente).
-  final sync = SyncService(outbox, ApiSyncGateway(api));
+  final sync = SyncService(outbox, ApiSyncGateway(api, cache));
 
   final repo = CourseRepository(api, cache);
   final chat = ChatController(db, outbox, sync)..load();
@@ -69,6 +69,7 @@ Future<void> main() async {
       ChangeNotifierProvider.value(value: offline),
       ChangeNotifierProvider.value(value: notifications),
       Provider<ApiClient>.value(value: api),
+      Provider<OutboxRepository>.value(value: outbox),
       Provider<CourseRepository>.value(value: repo),
     ],
     child: const EducaDimApp(),

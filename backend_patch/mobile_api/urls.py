@@ -1,7 +1,7 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
 
-from . import notification_views, progress_views, views
+from . import notification_views, progress_views, quiz_views, views
 
 app_name = "mobile_api"
 
@@ -62,5 +62,24 @@ urlpatterns = [
         "notifications/<int:pk>/read/",
         notification_views.NotificationReadView.as_view(),
         name="notification_read",
+    ),
+
+    # --- Quiz (adisyon) ---
+    path(
+        "courses/<int:pk>/quizzes/",
+        quiz_views.CourseQuizzesView.as_view(),
+        name="course_quizzes",
+    ),
+    path("quizzes/<int:pk>/", quiz_views.QuizDetailView.as_view(), name="quiz_detail"),
+    path("quizzes/<int:pk>/start/", quiz_views.QuizStartView.as_view(), name="quiz_start"),
+    path(
+        "quiz-attempts/<int:pk>/submit/",
+        quiz_views.QuizAttemptSubmitView.as_view(),
+        name="quiz_attempt_submit",
+    ),
+    path(
+        "quiz-attempts/<int:pk>/",
+        quiz_views.QuizAttemptDetailView.as_view(),
+        name="quiz_attempt_detail",
     ),
 ]

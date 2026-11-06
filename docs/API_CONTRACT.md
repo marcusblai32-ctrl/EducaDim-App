@@ -27,6 +27,11 @@ Les réponses réussies sont mises en cache SQLite ; hors ligne, le dernier cont
 | `GET notifications/unread-count/` | compteur |
 | `POST notifications/<id>/read/` | marquer lue (idempotent) |
 | `POST notifications/read-all/` | tout marquer lu |
+| `GET courses/<id>/quizzes/` | quiz publiés + meilleur score |
+| `GET quizzes/<id>/` | questions (sans bonnes réponses) |
+| `POST quizzes/<id>/start/` | démarre/reprend une tentative (idempotent) |
+| `POST quiz-attempts/<id>/submit/` | soumission + correction serveur (idempotent) |
+| `GET quiz-attempts/<id>/` | résultat |
 | `GET courses/<id>/flashcards/` | flashcards (403 `course_access_required`) |
 
 Tant que ce patch n'est pas déployé : la progression reste en file locale (rien n'est perdu)
@@ -38,7 +43,8 @@ et l'écran flashcards affiche « pas encore disponible sur le serveur ».
    `lesson_id`, `course_id`, `completed_at`). À câbler dans `SyncGateway.push`
    (README backend : POST appelant `ProgresLecon.terminer()`, ignorer les renvois
    si la leçon est déjà terminée).
-2. **Quiz** (`quiz/services.py` existe, pas d'endpoint) et **flashcards**
+2. **Quiz** : endpoints dans le patch (types single, vrai_faux, multiple, texte_trous, texte_libre ; les quiz
+   audio/vidéo/fichier restent à passer sur le site) et **flashcards**
    (`courses.Flashcard`, seul `flashcards_count` est exposé) : écrans non construits.
 3. **Chat** : modèles `ChatRoom`/`Message` existent, pas d'endpoint JSON.
    L'app garde l'historique local et met `chat_message` en file (`client_id`, `body`, `created_at`).

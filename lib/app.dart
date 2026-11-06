@@ -11,7 +11,9 @@ import 'features/courses/explore_screen.dart';
 import 'features/courses/flashcards_screen.dart';
 import 'features/courses/lesson_screen.dart';
 import 'features/courses/my_courses_screen.dart';
+import 'features/courses/models.dart' show QuizRun;
 import 'features/courses/progress_screen.dart';
+import 'features/courses/quiz_screens.dart';
 import 'features/downloads/downloads_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/notifications/notifications_screen.dart';
@@ -37,13 +39,11 @@ GoRouter buildRouter(AuthController auth) => GoRouter(
             GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
             GoRoute(path: '/explore', builder: (_, __) => const ExploreScreen()),
             GoRoute(path: '/courses', builder: (_, __) => const MyCoursesScreen()),
-            GoRoute(
-                path: '/notifications',
-                builder: (_, __) => const NotificationsScreen()),
             GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
           ],
         ),
         GoRoute(path: '/downloads', builder: (_, __) => const DownloadsScreen()),
+        GoRoute(path: '/notifications', builder: (_, __) => const NotificationsScreen()),
         GoRoute(path: '/progress', builder: (_, __) => const ProgressScreen()),
         GoRoute(path: '/chat', builder: (_, __) => const ChatScreen()),
         GoRoute(
@@ -53,6 +53,27 @@ GoRouter buildRouter(AuthController auth) => GoRouter(
         GoRoute(
           path: '/flashcards/:id',
           builder: (_, st) => FlashcardsScreen(int.parse(st.pathParameters['id']!)),
+        ),
+        GoRoute(
+          path: '/course/:id/quizzes',
+          builder: (_, st) => QuizListScreen(int.parse(st.pathParameters['id']!)),
+        ),
+        GoRoute(
+          path: '/quiz/:id',
+          builder: (_, st) => QuizIntroScreen(int.parse(st.pathParameters['id']!)),
+        ),
+        GoRoute(
+          path: '/quiz/:id/take',
+          builder: (_, st) {
+            final run = st.extra;
+            return run is QuizRun
+                ? QuizTakeScreen(run)
+                : QuizIntroScreen(int.parse(st.pathParameters['id']!));
+          },
+        ),
+        GoRoute(
+          path: '/quiz-result/:id',
+          builder: (_, st) => QuizResultScreen(int.parse(st.pathParameters['id']!)),
         ),
         GoRoute(
           path: '/lesson/:id',

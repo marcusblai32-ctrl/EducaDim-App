@@ -23,7 +23,7 @@ construit sur l'API `mobile_api/` du dépôt. Prototype de référence : `refere
 - Chat local avec envoi différé ; profil ; thème clair/sombre ; téléchargements (liste, taille, suppression).
 
 ## Patch backend fourni (à déployer)
-`backend_patch/` (dans l'archive de livraison) ajoute progression, `me/progress/`, `me/activity/`, notifications et flashcards.
+`backend_patch/` (dans l'archive de livraison) ajoute progression, `me/progress/`, `me/activity/`, notifications, flashcards et quiz.
 Après déploiement : les leçons terminées se synchronisent automatiquement (aller + retour).
 
 ## Dépend d'endpoints absents du backend

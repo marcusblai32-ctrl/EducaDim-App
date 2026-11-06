@@ -73,6 +73,29 @@ void main() {
     expect(log, ['POST notifications/9/read/']);
   });
 
+  test('quiz_submit 201 -> synced, envoie les réponses', () async {
+    final log = <String>[];
+    Object? body;
+    final g = _gw((o) {
+      body = o.data;
+      return _json({'attempt_id': 3, 'submitted': true}, 201);
+    }, log);
+    final out = await g.push(_item('quiz_submit', {
+      'attempt_id': 3,
+      'answers': [
+        {'question_id': 1, 'reponse_ids': [10], 'texte': ''}
+      ]
+    }));
+    expect(out, PushOutcome.synced);
+    expect(log, ['POST quiz-attempts/3/submit/']);
+    expect((body as Map)['answers'], isNotEmpty);
+  });
+
+  test('quiz_submit 400/409 -> rejected (ne bloque pas la file)', () async {
+    final g = _gw((o) => _json({'detail': 'x'}, 400));
+    expect(await g.push(_item('quiz_submit', {'attempt_id': 3})), PushOutcome.rejected);
+  });
+
   test('chat_message -> unavailable (aucun endpoint)', () async {
     final g = _gw((o) => _json({}, 200));
     expect(await g.push(_item('chat_message', {'body': 'x'})), PushOutcome.unavailable);

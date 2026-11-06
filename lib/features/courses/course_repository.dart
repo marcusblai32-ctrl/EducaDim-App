@@ -71,6 +71,37 @@ class CourseRepository {
   Future<Loaded<List<Flashcard>>> flashcards(int courseId) => _get(
       'courses/$courseId/flashcards/', 'flashcards:$courseId', Flashcard.listFromJson);
 
+  Future<Loaded<List<QuizSummary>>> quizzes(int courseId) =>
+      _get('courses/$courseId/quizzes/', 'quizzes:$courseId', QuizSummary.listFromJson);
+
+  Future<Loaded<QuizDetail>> quiz(int id) =>
+      _get('quizzes/$id/', 'quiz:$id', QuizDetail.fromJson);
+
+  /// Démarre ou reprend une tentative (en ligne obligatoire).
+  Future<QuizAttempt> startQuiz(int quizId) async {
+    try {
+      final res = await _api.dio.post('quizzes/$quizId/start/');
+      return QuizAttempt.fromJson(res.data);
+    } on DioException catch (e) {
+      throw mapDio(e);
+    }
+  }
+
+  /// Envoi direct ; le résultat est mis en cache pour la lecture hors ligne.
+  Future<QuizResult> submitQuiz(int attemptId, List<Map<String, dynamic>> answers) async {
+    try {
+      final res = await _api.dio
+          .post('quiz-attempts/$attemptId/submit/', data: {'answers': answers});
+      await _cache.put('quiz:attempt:$attemptId', res.data);
+      return QuizResult.fromJson(res.data);
+    } on DioException catch (e) {
+      throw mapDio(e);
+    }
+  }
+
+  Future<Loaded<QuizResult>> quizResult(int attemptId) =>
+      _get('quiz-attempts/$attemptId/', 'quiz:attempt:$attemptId', QuizResult.fromJson);
+
   Future<Loaded<Lesson>> lesson(int id) =>
       _get('lessons/$id/', 'lesson:$id', Lesson.fromJson);
 

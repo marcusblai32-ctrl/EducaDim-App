@@ -3,6 +3,7 @@ import '../../core/db/app_database.dart';
 import '../../core/db/cache_store.dart';
 import '../../core/network/api_exception.dart';
 import 'course_repository.dart';
+import 'models.dart';
 
 class OfflineCourse {
   OfflineCourse(this.courseId, this.title, this.lessons, this.skipped, this.createdAt);
@@ -65,6 +66,12 @@ class OfflineCourseService extends ChangeNotifier {
       try {
         await _repo.flashcards(courseId);
       } catch (_) {} // endpoint absent ou cours sans flashcards
+      try {
+        final qs = await _repo.quizzes(courseId);
+        for (final q in qs.value.where((q) => q.compatible)) {
+          await _repo.quiz(q.id);
+        }
+      } catch (_) {} // endpoint absent ou cours sans quiz
       await _db.db.rawInsert(
         'INSERT OR REPLACE INTO offline_courses(course_id,title,lessons,skipped,created_at) VALUES(?,?,?,?,?)',
         [courseId, title, lessons.length - skipped, skipped, DateTime.now().millisecondsSinceEpoch],
@@ -86,6 +93,13 @@ class OfflineCourseService extends ChangeNotifier {
       } catch (_) {}
     }
     await _cache.delete('flashcards:$courseId');
+    final qc = await _cache.get('quizzes:$courseId');
+    if (qc != null) {
+      for (final q in QuizSummary.listFromJson(qc)) {
+        await _cache.delete('quiz:${q.id}');
+      }
+      await _cache.delete('quizzes:$courseId');
+    }
     await _db.db.delete('offline_courses', where: 'course_id = ?', whereArgs: [courseId]);
     await load();
   }

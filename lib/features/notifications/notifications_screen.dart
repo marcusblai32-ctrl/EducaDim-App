@@ -34,16 +34,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Widget build(BuildContext context) {
     final svc = context.watch<NotificationService>();
     final t = Theme.of(context);
-    return SafeArea(
-      child: Column(children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Expanded(child: PageHeader('Centre de notifications', 'Vos actualités')),
-            if (svc.unread > 0)
-              TextButton(onPressed: svc.markAllRead, child: const Text('Tout lire')),
-          ]),
-        ),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Notifications'),
+        actions: [
+          if (svc.unread > 0)
+            TextButton(onPressed: svc.markAllRead, child: const Text('Tout lire')),
+          const SizedBox(width: 4),
+        ],
+      ),
+      body: Column(children: [
         Expanded(
           child: Builder(builder: (_) {
             if (svc.loading && svc.items.isEmpty) {

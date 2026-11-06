@@ -54,6 +54,12 @@ class OutboxRepository {
         .toList();
   }
 
+  Future<bool> isPending(String id) async {
+    final r = await _d.db.query('outbox',
+        columns: ['id'], where: "id = ? AND status = 'pending'", whereArgs: [id]);
+    return r.isNotEmpty;
+  }
+
   Future<int> pendingCount() async {
     final r = await _d.db
         .rawQuery("SELECT COUNT(*) c FROM outbox WHERE status = 'pending'");

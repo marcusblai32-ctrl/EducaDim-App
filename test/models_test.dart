@@ -92,4 +92,53 @@ void main() {
     expect(c.titre, '');
     expect(c.access.hasAccess, false);
   });
+
+  test('QuizDetail.fromJson : pas de champ de bonne réponse', () {
+    final q = QuizDetail.fromJson({
+      'id': 5,
+      'titre': 'Quiz 1',
+      'duree_quiz': 10,
+      'pourcentage_reussite': 70,
+      'course_id': 3,
+      'mobile_compatible': true,
+      'questions': [
+        {
+          'id': 1,
+          'type': 'single',
+          'supported': true,
+          'texte': 'Q ?',
+          'points': 2,
+          'media': {'image': null, 'audio': null, 'video': null, 'texte': null},
+          'reponses': [
+            {'id': 10, 'texte': 'A'},
+            {'id': 11, 'texte': 'B'}
+          ]
+        },
+        {'id': 2, 'type': 'texte_trous', 'supported': true, 'texte': 'Trou', 'points': 1}
+      ]
+    });
+    expect(q.questions.length, 2);
+    expect(q.questions[0].isChoice, true);
+    expect(q.questions[0].choices.map((c) => c.id), [10, 11]);
+    expect(q.questions[1].isChoice, false);
+    expect(q.courseId, 3);
+  });
+
+  test('QuizResult.fromJson', () {
+    final r = QuizResult.fromJson({
+      'attempt_id': 7,
+      'quiz_id': 5,
+      'submitted': true,
+      'score': 66.6,
+      'reussi': false,
+      'pourcentage_reussite': 70,
+      'details': [
+        {'question_id': 1, 'correct': true, 'explication': 'ok'},
+        {'question_id': 2, 'correct': null, 'explication': null}
+      ]
+    });
+    expect(r.submitted, true);
+    expect(r.reussi, false);
+    expect(r.details[1].correct, isNull);
+  });
 }

@@ -160,6 +160,18 @@ class _Body extends StatelessWidget {
               ),
             ),
           ]),
+          if (d.quizzesCount > 0) ...[
+            const SizedBox(height: 10),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.quiz_outlined),
+                title: const Text('Quiz'),
+                subtitle: Text('${d.quizzesCount} quiz disponible(s)'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/course/${c.id}/quizzes'),
+              ),
+            ),
+          ],
           if (d.flashcardsCount > 0) ...[
             const SizedBox(height: 10),
             Card(

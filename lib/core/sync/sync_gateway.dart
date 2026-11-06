@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../db/cache_store.dart';
 import '../db/outbox_repository.dart';
 import '../network/api_client.dart';
 import '../network/api_exception.dart';
@@ -32,21 +33,28 @@ class UnconfiguredGateway implements SyncGateway {
 /// Passerelle réelle :
 ///  - lesson_completed  -> POST lessons/<id>/complete/ (idempotent côté serveur)
 ///  - notification_read -> POST notifications/<id>/read/ (idempotent)
+///  - quiz_submit       -> POST quiz-attempts/<id>/submit/ (idempotent, résultat mis en cache)
 ///  - chat_message      -> pas d'endpoint : reste en attente
 class ApiSyncGateway implements SyncGateway {
-  ApiSyncGateway(this._api);
+  ApiSyncGateway(this._api, [this._cache]);
   final ApiClient _api;
+  final CacheStore? _cache;
 
-  Future<PushOutcome> _post(String path, [Object? data]) async {
+  Future<PushOutcome> _post(String path,
+      [Object? data, Future<void> Function(dynamic)? onOk]) async {
     try {
       final res = await _api.dio.post(path, data: data);
       final code = res.statusCode ?? 0;
-      return (code == 200 || code == 201) ? PushOutcome.synced : PushOutcome.retryLater;
+      if (code == 200 || code == 201) {
+        if (onOk != null) await onOk(res.data);
+        return PushOutcome.synced;
+      }
+      return PushOutcome.retryLater;
     } on DioException catch (e) {
       final ex = mapDio(e);
       if (ex.isOffline) return PushOutcome.retryLater;
       final s = ex.statusCode ?? 0;
-      if (s == 403 || s == 404) return PushOutcome.rejected;
+      if (s == 400 || s == 403 || s == 404 || s == 409) return PushOutcome.rejected;
       return PushOutcome.retryLater; // 401, 5xx, etc.
     }
   }
@@ -65,6 +73,14 @@ class ApiSyncGateway implements SyncGateway {
         final id = item.payload['id'];
         if (id is! int) return Future.value(PushOutcome.rejected);
         return _post('notifications/$id/read/');
+      case 'quiz_submit':
+        final id = item.payload['attempt_id'];
+        if (id is! int) return Future.value(PushOutcome.rejected);
+        return _post(
+          'quiz-attempts/$id/submit/',
+          {'answers': item.payload['answers'] ?? const []},
+          (data) async => _cache?.put('quiz:attempt:$id', data),
+        );
       default:
         return Future.value(PushOutcome.unavailable);
     }
