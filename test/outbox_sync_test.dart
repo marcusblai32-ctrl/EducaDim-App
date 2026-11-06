@@ -1,8 +1,10 @@
 import 'package:educadim/core/db/app_database.dart';
 import 'package:educadim/core/db/outbox_repository.dart';
+import 'package:educadim/core/db/user_data_guard.dart';
 import 'package:educadim/core/sync/sync_gateway.dart';
 import 'package:educadim/core/sync/sync_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 class _Gw implements SyncGateway {
@@ -59,6 +61,33 @@ void main() {
     await sync.flush();
     final items = await outbox.pending();
     expect(items.single.attempts, 1);
+  });
+
+  test('un élément d\'un autre compte n\'est jamais envoyé avec le jeton courant', () async {
+    outbox.ownerProvider = () => 'compte-A';
+    await outbox.enqueue('lesson_completed', {'lesson_id': 1}, id: 'a1');
+    final gw = _Gw(PushOutcome.synced);
+    final sync = SyncService(outbox, gw)..currentOwner = () => 'compte-B';
+    await sync.flush();
+    expect(gw.pushed, isEmpty);
+    expect(await outbox.pendingCount(), 1); // conservé pour son propriétaire
+
+    sync.currentOwner = () => 'compte-A';
+    await sync.flush();
+    expect(gw.pushed, ['a1']);
+    expect(await outbox.pendingCount(), 0);
+  });
+
+  test('UserDataGuard : purge au changement de compte, pas pour le même compte', () async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final guard = UserDataGuard(db, prefs);
+    await db.db.insert('local_progress', {'lesson_id': 1, 'course_id': 1, 'completed_at': 1});
+    expect(await guard.onLogin('A'), false); // première connexion
+    expect(await guard.onLogin('A'), false); // même compte
+    expect((await db.db.query('local_progress')).length, 1);
+    expect(await guard.onLogin('B'), true); // autre compte
+    expect((await db.db.query('local_progress')).length, 0);
   });
 
   test('rejected : conservé comme refusé et ne bloque pas la file', () async {

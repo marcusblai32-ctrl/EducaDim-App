@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:open_filex/open_filex.dart';
 import '../../core/widgets/common.dart';
 import '../courses/offline_course_service.dart';
 import 'download_service.dart';
@@ -79,7 +80,14 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                     child: ListTile(
                       leading: const Icon(Icons.offline_pin_outlined),
                       title: Text(d.title),
-                      subtitle: Text('${formatBytes(d.bytes)} · Disponible hors ligne'),
+                      subtitle: Text('${formatBytes(d.bytes)} · Touchez pour ouvrir'),
+                      onTap: () async {
+                        final r = await OpenFilex.open(d.path);
+                        if (r.type != ResultType.done && context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                              content: Text('Aucune application disponible pour ouvrir ce fichier.')));
+                        }
+                      },
                       trailing: IconButton(
                         tooltip: 'Supprimer',
                         icon: const Icon(Icons.delete_outline),

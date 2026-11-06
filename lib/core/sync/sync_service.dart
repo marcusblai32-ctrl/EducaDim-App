@@ -24,6 +24,9 @@ class SyncService extends ChangeNotifier {
   /// Exécuté après l'envoi (ex. récupérer la progression du serveur).
   Future<void> Function()? afterFlush;
 
+  /// Identité du compte connecté ; les éléments d'un autre compte restent en attente.
+  String? Function()? currentOwner;
+
   bool _syncing = false;
   bool _online = true;
   int _pending = 0;
@@ -63,6 +66,8 @@ class SyncService extends ChangeNotifier {
     notifyListeners();
     try {
       for (final item in await _outbox.pending()) {
+        final owner = item.payload['_owner'];
+        if (owner != null && owner != currentOwner?.call()) continue;
         PushOutcome out;
         try {
           out = await _gateway.push(item);

@@ -21,4 +21,6 @@ class CacheStore {
 
   Future<void> delete(String key) =>
       _d.db.delete('api_cache', where: 'key = ?', whereArgs: [key]);
+
+  Future<void> deleteAll() => _d.db.delete('api_cache');
 }

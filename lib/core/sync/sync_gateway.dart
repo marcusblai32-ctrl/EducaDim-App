@@ -34,7 +34,7 @@ class UnconfiguredGateway implements SyncGateway {
 ///  - lesson_completed  -> POST lessons/<id>/complete/ (idempotent côté serveur)
 ///  - notification_read -> POST notifications/<id>/read/ (idempotent)
 ///  - quiz_submit       -> POST quiz-attempts/<id>/submit/ (idempotent, résultat mis en cache)
-///  - chat_message      -> pas d'endpoint : reste en attente
+///  - chat_message      -> POST chat/rooms/<room_id>/messages/ (idempotent via client_id)
 class ApiSyncGateway implements SyncGateway {
   ApiSyncGateway(this._api, [this._cache]);
   final ApiClient _api;
@@ -73,6 +73,11 @@ class ApiSyncGateway implements SyncGateway {
         final id = item.payload['id'];
         if (id is! int) return Future.value(PushOutcome.rejected);
         return _post('notifications/$id/read/');
+      case 'chat_message':
+        final room = item.payload['room_id'];
+        final text = item.payload['contenu'];
+        if (room is! int || text is! String) return Future.value(PushOutcome.rejected);
+        return _post('chat/rooms/$room/messages/', {'contenu': text, 'client_id': item.id});
       case 'quiz_submit':
         final id = item.payload['attempt_id'];
         if (id is! int) return Future.value(PushOutcome.rejected);

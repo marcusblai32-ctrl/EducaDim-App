@@ -3,8 +3,10 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/config/api_config.dart';
 import '../../core/sync/sync_service.dart';
+import '../../core/theme/colors.dart';
 import '../../core/theme/theme_controller.dart';
 import '../../core/widgets/common.dart';
+import '../admin/admin_repository.dart';
 import '../auth/auth_controller.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -70,6 +72,28 @@ class ProfileScreen extends StatelessWidget {
                     child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.chevron_right),
             onTap: sync.flush,
+          ),
+        ),
+        const SizedBox(height: 10),
+        if (context.watch<AdminAccess>().canManage) ...[
+          Card(
+            color: EdColors.red.withValues(alpha: 0.08),
+            child: ListTile(
+              leading: const Icon(Icons.admin_panel_settings_outlined, color: EdColors.red),
+              title: const Text('Administration', style: TextStyle(fontWeight: FontWeight.w800)),
+              subtitle: const Text('Ajouter cours, unités, modules, leçons, sections et quiz'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push('/admin'),
+            ),
+          ),
+          const SizedBox(height: 10),
+        ],
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.workspace_premium_outlined),
+            title: const Text('Mes certificats'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/certificates'),
           ),
         ),
         const SizedBox(height: 10),

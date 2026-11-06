@@ -8,28 +8,23 @@ construit sur l'API `mobile_api/` du dépôt. Prototype de référence : `refere
 > n'ont **pas** été lancés ; des corrections mineures peuvent être nécessaires au premier
 > build. Flutter ≥ 3.27 requis (`withValues`, `CardThemeData`).
 
-## Fonctionnalités opérationnelles (contre l'API réelle)
-- Connexion (e-mail ou user_id), jetons JWT en stockage sécurisé, refresh avec rotation
-  (un seul refresh concurrent), session expirée → retour à la connexion, déconnexion.
-- Accueil personnalisé (prénom, reprise de la dernière leçon, recommandations, statistiques locales).
-- Explorer : catalogue paginé côté serveur, recherche, filtre gratuit/payant, détail, prérequis, état d'accès.
-- Mes cours : cours accessibles (inscription active, abonnement, gratuit).
-- Programme (unités/modules/leçons) et lecteur de leçon : textes, images, liens, PDF/audio/vidéo
-  (ouverture externe + téléchargement fichier).
-- Gestion des 403 métier (`course_access_required`, `lesson_quiz_required`).
-- Hors ligne : cache SQLite des réponses, « Télécharger le cours » (structure + contenu des
-  leçons), bandeau « hors ligne », progression de leçon enregistrée localement.
-- File d'attente (`outbox`) idempotente + service de synchronisation automatique au retour du réseau.
-- Chat local avec envoi différé ; profil ; thème clair/sombre ; téléchargements (liste, taille, suppression).
+## Fonctionnalités
+- Connexion JWT sécurisée, refresh automatique, session expirée, déconnexion, protection des routes.
+- Accueil, catalogue (recherche, filtre), détail de cours, prérequis, programme, leçons (texte, image, liens,
+  PDF/audio/vidéo), progression locale + serveur (aller-retour), « Ma progression » et activités récentes.
+- Quiz (chaînes de questions, minuteur, correction serveur, résultat détaillé, envoi différé hors ligne),
+  flashcards, certificats (affichage ; téléchargement sur le site).
+- Chat par salons (discussion de cours), messages différés hors ligne ; notifications (badge, lu/non lu).
+- Hors ligne : cache SQLite, cours téléchargeables, file d'attente idempotente, synchronisation automatique.
+- Images de cours : cache disque, remplissage 16:9 du card, visuel de marque si indisponible.
+- Administration (admin/staff autorisés, via Profil) : créer cours (brouillon), unités, modules, leçons, sections,
+  contenus (texte/URL) et quiz + questions ; publier/dépublier.
+- Téléphones partagés : isolation des données entre comptes.
+- Thème clair/sombre, interface en français. Pas de paiement en ligne (cours payant → site).
 
-## Patch backend fourni (à déployer)
-`backend_patch/` (dans l'archive de livraison) ajoute progression, `me/progress/`, `me/activity/`, notifications, flashcards et quiz.
-Après déploiement : les leçons terminées se synchronisent automatiquement (aller + retour).
-
-## Dépend d'endpoints absents du backend
-Progression distante, quiz, flashcards, chat serveur, notifications/push, certificats,
-inscription in-app, manifest/URL signées pour médias. Détail : `docs/API_CONTRACT.md`.
-Tant que `UnconfiguredGateway` est en place, ces données restent en file locale, jamais supprimées.
+## Backend
+Appliquer `backend_patch/` (ou `mobile_api_complet.zip`) sur le dépôt Django : aucune migration.
+Voir `docs/API_CONTRACT.md` pour le détail et les limites (push FCM, quiz à fichiers/audio).
 
 ## Lancer / compiler
 ```

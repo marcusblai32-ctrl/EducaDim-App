@@ -22,6 +22,11 @@ class OutboxRepository {
   OutboxRepository(this._d);
   final AppDatabase _d;
 
+  /// Identité de l'utilisateur courant : chaque opération est marquée avec elle
+  /// (`_owner`) pour ne jamais être envoyée avec le jeton d'un autre compte
+  /// (téléphones partagés).
+  String? Function()? ownerProvider;
+
   /// Ajoute une opération. Un `id` déjà présent est ignoré : pas de doublon.
   Future<String> enqueue(String kind, Map<String, dynamic> payload,
       {String? id}) async {
@@ -31,7 +36,10 @@ class OutboxRepository {
       {
         'id': key,
         'kind': kind,
-        'payload': jsonEncode(payload),
+        'payload': jsonEncode({
+          ...payload,
+          if (ownerProvider?.call() != null) '_owner': ownerProvider!.call(),
+        }),
         'created_at': DateTime.now().millisecondsSinceEpoch,
       },
       conflictAlgorithm: ConflictAlgorithm.ignore,

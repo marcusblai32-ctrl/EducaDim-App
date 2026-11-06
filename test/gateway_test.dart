@@ -96,9 +96,33 @@ void main() {
     expect(await g.push(_item('quiz_submit', {'attempt_id': 3})), PushOutcome.rejected);
   });
 
-  test('chat_message -> unavailable (aucun endpoint)', () async {
+  test('chat_message -> POST du salon avec client_id', () async {
+    final log = <String>[];
+    Object? body;
+    final g = _gw((o) {
+      body = o.data;
+      return _json({'id': 1}, 201);
+    }, log);
+    final out = await g.push(OutboxItem(
+        id: 'uuid-1',
+        kind: 'chat_message',
+        payload: {'room_id': 4, 'contenu': 'Bonjour'},
+        createdAt: DateTime.now(),
+        attempts: 0));
+    expect(out, PushOutcome.synced);
+    expect(log, ['POST chat/rooms/4/messages/']);
+    expect((body as Map)['client_id'], 'uuid-1');
+    expect(body['contenu'], 'Bonjour');
+  });
+
+  test('chat_message sans salon (ancien chat local) -> rejected', () async {
     final g = _gw((o) => _json({}, 200));
-    expect(await g.push(_item('chat_message', {'body': 'x'})), PushOutcome.unavailable);
+    expect(await g.push(_item('chat_message', {'body': 'x'})), PushOutcome.rejected);
+  });
+
+  test('type inconnu -> unavailable', () async {
+    final g = _gw((o) => _json({}, 200));
+    expect(await g.push(_item('autre', {})), PushOutcome.unavailable);
   });
 
   test('AppNotification.fromJson', () {

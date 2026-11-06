@@ -7,6 +7,7 @@ import '../../core/network/api_exception.dart';
 import '../../core/theme/colors.dart';
 import '../../core/widgets/async_view.dart';
 import '../../core/widgets/common.dart';
+import '../chat/chat_controller.dart';
 import 'course_repository.dart';
 import 'course_widgets.dart';
 import 'models.dart';
@@ -113,10 +114,10 @@ class _Body extends StatelessWidget {
                 const SizedBox(height: 14),
                 FilledButton(
                   onPressed: () => launchUrl(
-                    Uri.parse('${ApiConfig.siteUrl}/fr/cours/'),
+                    Uri.parse('${ApiConfig.siteUrl}/fr/cours/${c.id}/'),
                     mode: LaunchMode.externalApplication,
                   ),
-                  child: const Text('S’inscrire sur le site EducaDim'),
+                  child: const Text('S’inscrire et payer sur le site'),
                 ),
               ]),
             ),
@@ -160,6 +161,26 @@ class _Body extends StatelessWidget {
               ),
             ),
           ]),
+          const SizedBox(height: 10),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.forum_outlined),
+              title: const Text('Discussion du cours'),
+              subtitle: const Text('Échangez avec les autres apprenants'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () async {
+                final msg = ScaffoldMessenger.of(context);
+                final nav = GoRouter.of(context);
+                try {
+                  final id = await context.read<ChatController>().openCourseRoom(c.id);
+                  nav.push('/chat/$id', extra: 'Groupe - ${c.titre}');
+                } on ApiException catch (e) {
+                  msg.showSnackBar(SnackBar(
+                      content: Text(e.isOffline ? 'Connexion requise pour ouvrir la discussion.' : e.message)));
+                }
+              },
+            ),
+          ),
           if (d.quizzesCount > 0) ...[
             const SizedBox(height: 10),
             Card(

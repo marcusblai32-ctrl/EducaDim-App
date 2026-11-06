@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/config/api_config.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/theme/colors.dart';
+import '../../core/widgets/net_image.dart';
 import '../../core/widgets/common.dart';
 import '../downloads/download_service.dart';
 import 'course_repository.dart';
@@ -173,11 +174,7 @@ class _ContentTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 6),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(12),
-          child: Image.network(url,
-              cacheWidth: 900,
-              errorBuilder: (_, __, ___) => const ListTile(
-                  leading: Icon(Icons.broken_image_outlined),
-                  title: Text('Image indisponible (hors ligne ?)'))),
+          child: NetImage(url, aspectRatio: null, fit: BoxFit.fitWidth),
         ),
       );
     }

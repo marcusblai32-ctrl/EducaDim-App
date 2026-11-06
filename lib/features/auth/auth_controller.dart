@@ -20,6 +20,17 @@ class AuthController extends ChangeNotifier {
   String get fullName => (user?['full_name'] as String?) ?? '';
   String get email => (user?['email'] as String?) ?? '';
 
+  /// Identité stable du compte (marque la file d'attente et détecte le changement de compte).
+  String? get identity {
+    final u = user;
+    if (u == null) return null;
+    final v = u['id'] ?? u['user_id'] ?? u['email'];
+    return v?.toString();
+  }
+
+  /// Appelé après une connexion réussie (ex. purge des données d'un autre compte).
+  Future<void> Function(String identity)? onLoggedIn;
+
   AuthStatus get status => _status;
 
   Future<void> init() async {
@@ -70,6 +81,8 @@ class AuthController extends ChangeNotifier {
         user = Map<String, dynamic>.from(d['user'] as Map);
         await _cache.put('me', user);
       }
+      final id = identity;
+      if (id != null) await onLoggedIn?.call(id);
       _status = AuthStatus.authenticated;
       notifyListeners();
     } catch (e) {

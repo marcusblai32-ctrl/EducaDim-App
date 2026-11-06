@@ -10,7 +10,7 @@ class AppDatabase {
   AppDatabase(this.db);
   final Database db;
 
-  static const int version = 2;
+  static const int version = 3;
 
   static Future<AppDatabase> open({String? path, DatabaseFactory? factory}) async {
     final f = factory ?? databaseFactory;
@@ -25,6 +25,9 @@ class AppDatabase {
 
   static Future<void> _upgrade(Database d, int from, int to) async {
     if (from < 2) await _createV2(d);
+    if (from < 3) {
+      await d.execute('ALTER TABLE chat_messages ADD COLUMN room_id INTEGER');
+    }
   }
 
   static Future<void> _createV2(Database d) async {
@@ -73,7 +76,8 @@ class AppDatabase {
         body TEXT NOT NULL,
         created_at INTEGER NOT NULL,
         direction TEXT NOT NULL,       -- out | in
-        state TEXT NOT NULL            -- pending | sent
+        state TEXT NOT NULL,           -- pending | sent | failed
+        room_id INTEGER                -- salon serveur (null = ancien chat local)
       )''');
     await d.execute('''
       CREATE TABLE downloads(

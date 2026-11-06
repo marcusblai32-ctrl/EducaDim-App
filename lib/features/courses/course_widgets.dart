@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/colors.dart';
+import '../../core/widgets/net_image.dart';
 import 'models.dart';
 
 class CourseCard extends StatelessWidget {
@@ -17,40 +18,24 @@ class CourseCard extends StatelessWidget {
       child: InkWell(
         onTap: () => context.push('/course/${course.id}'),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Container(
-            height: 120,
-            width: double.infinity,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [EdColors.navy, EdColors.blue],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: Stack(fit: StackFit.expand, children: [
-              if (course.image != null)
-                Image.network(
-                  course.image!,
-                  fit: BoxFit.cover,
-                  cacheWidth: 600, // limite la mémoire sur appareils modestes
-                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                ),
-              if (course.categorie != null)
-                Positioned(
-                  left: 12,
-                  bottom: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.4),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(course.categorie!,
-                        style: const TextStyle(color: Colors.white, fontSize: 11)),
+          // L'image occupe toute la largeur du card (16:9, recadrée sans déformation).
+          Stack(children: [
+            NetImage(course.image),
+            if (course.categorie != null)
+              Positioned(
+                left: 12,
+                bottom: 12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(20),
                   ),
+                  child: Text(course.categorie!,
+                      style: const TextStyle(color: Colors.white, fontSize: 11)),
                 ),
-            ]),
-          ),
+              ),
+          ]),
           Padding(
             padding: const EdgeInsets.all(14),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

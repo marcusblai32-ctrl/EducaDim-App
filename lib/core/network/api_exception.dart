@@ -47,6 +47,9 @@ class ApiException implements Exception {
       if (status == 400) {
         return ApiException(detail ?? 'Données invalides.', statusCode: status);
       }
+      if (status == 402) {
+        return ApiException(detail ?? 'Paiement requis.', statusCode: status, code: code);
+      }
       if (status == 409) {
         return ApiException(detail ?? 'Action impossible pour le moment.',
             statusCode: status, code: code);

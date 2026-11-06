@@ -1,7 +1,7 @@
 name: educadim
 description: Application mobile EducaDim (client Flutter du backend Django existant).
 publish_to: "none"
-version: 0.1.0+1
+version: 1.0.0+1
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
@@ -21,6 +21,8 @@ dependencies:
   google_fonts: ^6.2.1
   url_launcher: ^6.3.0
   uuid: ^4.4.0
+  cached_network_image: ^3.4.1
+  open_filex: ^4.5.0
 
 dev_dependencies:
   flutter_test:

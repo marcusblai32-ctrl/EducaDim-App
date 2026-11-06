@@ -8,6 +8,7 @@ import '../../core/db/outbox_repository.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/sync/sync_service.dart';
 import '../../core/theme/colors.dart';
+import '../../core/widgets/net_image.dart';
 import '../../core/widgets/async_view.dart';
 import '../../core/widgets/common.dart';
 import 'course_repository.dart';
@@ -346,9 +347,7 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
               padding: const EdgeInsets.only(bottom: 12),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.network(q.image!,
-                    cacheWidth: 900,
-                    errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+                child: NetImage(q.image, aspectRatio: null, fit: BoxFit.fitWidth),
               ),
             ),
           if (q.mediaTexte != null)

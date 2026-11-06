@@ -5,6 +5,8 @@ import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
 import 'features/auth/auth_controller.dart';
 import 'features/auth/login_screen.dart';
+import 'features/admin/admin_screens.dart';
+import 'features/certificates/certificates_screen.dart';
 import 'features/chat/chat_screen.dart';
 import 'features/courses/course_detail_screen.dart';
 import 'features/courses/explore_screen.dart';
@@ -46,6 +48,23 @@ GoRouter buildRouter(AuthController auth) => GoRouter(
         GoRoute(path: '/notifications', builder: (_, __) => const NotificationsScreen()),
         GoRoute(path: '/progress', builder: (_, __) => const ProgressScreen()),
         GoRoute(path: '/chat', builder: (_, __) => const ChatScreen()),
+        GoRoute(
+          path: '/chat/:id',
+          builder: (_, st) => ChatRoomScreen(int.parse(st.pathParameters['id']!),
+              title: st.extra is String ? st.extra as String : null),
+        ),
+        GoRoute(path: '/certificates', builder: (_, __) => const CertificatesScreen()),
+        GoRoute(path: '/admin', builder: (_, __) => const AdminHomeScreen()),
+        GoRoute(path: '/admin/course/new', builder: (_, __) => const AdminCourseFormScreen()),
+        GoRoute(
+          path: '/admin/course/:id',
+          builder: (_, st) => AdminCourseTreeScreen(int.parse(st.pathParameters['id']!)),
+        ),
+        GoRoute(
+          path: '/admin/quiz/:id/question',
+          builder: (_, st) => AdminQuestionScreen(int.parse(st.pathParameters['id']!),
+              title: st.extra is String ? st.extra as String : null),
+        ),
         GoRoute(
           path: '/course/:id',
           builder: (_, st) => CourseDetailScreen(int.parse(st.pathParameters['id']!)),
