@@ -60,4 +60,34 @@ void main() {
     final items = await outbox.pending();
     expect(items.single.attempts, 1);
   });
+
+  test('rejected : conservé comme refusé et ne bloque pas la file', () async {
+    await outbox.enqueue('lesson_completed', {'lesson_id': 1}, id: 'a');
+    await outbox.enqueue('lesson_completed', {'lesson_id': 2}, id: 'b');
+    final gw = _SeqGw([PushOutcome.rejected, PushOutcome.synced]);
+    final sync = SyncService(outbox, gw);
+    final rejected = <String>[];
+    sync.onItemRejected = (i) => rejected.add(i.id);
+    await sync.flush();
+    expect(rejected, ['a']);
+    expect(await outbox.pendingCount(), 0); // a refusé, b synchronisé
+  });
+
+  test('unavailable (chat) ne bloque pas les leçons derrière lui', () async {
+    await outbox.enqueue('chat_message', {'body': 'x'}, id: 'c');
+    await outbox.enqueue('lesson_completed', {'lesson_id': 5}, id: 'l');
+    final gw = _SeqGw([PushOutcome.unavailable, PushOutcome.synced]);
+    final sync = SyncService(outbox, gw);
+    await sync.flush();
+    final left = await outbox.pending();
+    expect(left.map((i) => i.id), ['c']);
+  });
+}
+
+class _SeqGw implements SyncGateway {
+  _SeqGw(this.seq);
+  final List<PushOutcome> seq;
+  int i = 0;
+  @override
+  Future<PushOutcome> push(OutboxItem item) async => seq[i++];
 }

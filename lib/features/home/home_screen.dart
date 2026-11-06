@@ -103,6 +103,16 @@ class HomeScreen extends StatelessWidget {
         ),
         Card(
           child: ListTile(
+            leading: const Icon(Icons.insights_outlined, color: EdColors.blue),
+            title: const Text('Ma progression'),
+            subtitle: const Text('Cours en cours et activités récentes'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/progress'),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Card(
+          child: ListTile(
             leading: const Icon(Icons.sync_rounded, color: EdColors.blue),
             title: const Text('Synchronisation'),
             subtitle: Text(sync.note ??

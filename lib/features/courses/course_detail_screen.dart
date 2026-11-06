@@ -160,6 +160,18 @@ class _Body extends StatelessWidget {
               ),
             ),
           ]),
+          if (d.flashcardsCount > 0) ...[
+            const SizedBox(height: 10),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.style_outlined),
+                title: const Text('Flashcards'),
+                subtitle: Text('${d.flashcardsCount} carte(s) à réviser'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/flashcards/${c.id}'),
+              ),
+            ),
+          ],
           const SizedBox(height: 14),
           _CurriculumCard(c.id, repo),
         ],

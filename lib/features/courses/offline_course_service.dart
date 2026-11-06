@@ -62,6 +62,9 @@ class OfflineCourseService extends ChangeNotifier {
         progressDone++;
         notifyListeners();
       }
+      try {
+        await _repo.flashcards(courseId);
+      } catch (_) {} // endpoint absent ou cours sans flashcards
       await _db.db.rawInsert(
         'INSERT OR REPLACE INTO offline_courses(course_id,title,lessons,skipped,created_at) VALUES(?,?,?,?,?)',
         [courseId, title, lessons.length - skipped, skipped, DateTime.now().millisecondsSinceEpoch],
@@ -82,6 +85,7 @@ class OfflineCourseService extends ChangeNotifier {
         }
       } catch (_) {}
     }
+    await _cache.delete('flashcards:$courseId');
     await _db.db.delete('offline_courses', where: 'course_id = ?', whereArgs: [courseId]);
     await load();
   }

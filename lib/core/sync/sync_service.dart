@@ -18,6 +18,12 @@ class SyncService extends ChangeNotifier {
   /// Appelé après confirmation serveur d'un élément.
   void Function(OutboxItem item)? onItemSynced;
 
+  /// Appelé quand le serveur refuse définitivement un élément.
+  void Function(OutboxItem item)? onItemRejected;
+
+  /// Exécuté après l'envoi (ex. récupérer la progression du serveur).
+  Future<void> Function()? afterFlush;
+
   bool _syncing = false;
   bool _online = true;
   int _pending = 0;
@@ -68,10 +74,14 @@ class SyncService extends ChangeNotifier {
         if (out == PushOutcome.synced) {
           await _outbox.markSynced(item.id);
           onItemSynced?.call(item);
+        } else if (out == PushOutcome.rejected) {
+          await _outbox.markRejected(item.id, 'refusé par le serveur');
+          onItemRejected?.call(item);
+          _note = 'Un élément a été refusé par le serveur (accès ou quiz requis).';
         } else if (out == PushOutcome.unavailable) {
-          _note = "Envoi serveur non disponible pour l'instant "
-              '(endpoint non confirmé). Vos données restent sauvegardées.';
-          break;
+          // Pas d'endpoint pour ce type : on passe aux suivants sans le perdre.
+          _note = "Certains éléments (ex. chat) n'ont pas encore d'endpoint "
+              'serveur. Ils restent sauvegardés.';
         } else {
           await _outbox.markFailed(item.id, 'retry');
           _note = 'Serveur injoignable : nouvel essai automatique plus tard.';
@@ -79,6 +89,9 @@ class SyncService extends ChangeNotifier {
         }
       }
       await _outbox.purgeSynced();
+      try {
+        await afterFlush?.call();
+      } catch (_) {}
     } finally {
       _syncing = false;
       await refreshCount();

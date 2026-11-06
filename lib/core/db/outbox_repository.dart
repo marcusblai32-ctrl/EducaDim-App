@@ -72,6 +72,14 @@ class OutboxRepository {
         whereArgs: [id],
       );
 
+  /// Refus définitif du serveur : conservé pour audit, ne bloque plus la file.
+  Future<void> markRejected(String id, String reason) => _d.db.update(
+        'outbox',
+        {'status': 'rejected', 'last_error': reason},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+
   Future<void> markFailed(String id, String error) => _d.db.rawUpdate(
         'UPDATE outbox SET attempts = attempts + 1, last_error = ? WHERE id = ?',
         [error, id],

@@ -22,6 +22,10 @@ construit sur l'API `mobile_api/` du dépôt. Prototype de référence : `refere
 - File d'attente (`outbox`) idempotente + service de synchronisation automatique au retour du réseau.
 - Chat local avec envoi différé ; profil ; thème clair/sombre ; téléchargements (liste, taille, suppression).
 
+## Patch backend fourni (à déployer)
+`backend_patch/` (dans l'archive de livraison) ajoute progression, `me/progress/`, `me/activity/`, notifications et flashcards.
+Après déploiement : les leçons terminées se synchronisent automatiquement (aller + retour).
+
 ## Dépend d'endpoints absents du backend
 Progression distante, quiz, flashcards, chat serveur, notifications/push, certificats,
 inscription in-app, manifest/URL signées pour médias. Détail : `docs/API_CONTRACT.md`.

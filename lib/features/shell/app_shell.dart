@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/sync/sync_service.dart';
 import '../../core/theme/colors.dart';
 import '../../core/widgets/common.dart';
+import '../notifications/notification_service.dart';
 
 class AppShell extends StatelessWidget {
   const AppShell({super.key, required this.child});
@@ -17,11 +18,17 @@ class AppShell extends StatelessWidget {
     ('/profile', 'Profil', Icons.person_outline, Icons.person),
   ];
 
+  static Widget _badge(String route, int unread, Widget icon) =>
+      route == '/notifications' && unread > 0
+          ? Badge(label: Text(unread > 99 ? '99+' : '$unread'), child: icon)
+          : icon;
+
   @override
   Widget build(BuildContext context) {
     final loc = GoRouterState.of(context).uri.path;
     final idx = _tabs.indexWhere((t) => loc.startsWith(t.$1)).clamp(0, 4);
     final sync = context.watch<SyncService>();
+    final unread = context.watch<NotificationService>().unread;
     final t = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
@@ -55,8 +62,8 @@ class AppShell extends StatelessWidget {
         destinations: [
           for (final tab in _tabs)
             NavigationDestination(
-              icon: Icon(tab.$3),
-              selectedIcon: Icon(tab.$4, color: EdColors.red),
+              icon: _badge(tab.$1, unread, Icon(tab.$3)),
+              selectedIcon: _badge(tab.$1, unread, Icon(tab.$4, color: EdColors.red)),
               label: tab.$2,
             ),
         ],

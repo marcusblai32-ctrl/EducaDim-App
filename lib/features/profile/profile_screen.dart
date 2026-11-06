@@ -75,6 +75,15 @@ class ProfileScreen extends StatelessWidget {
         const SizedBox(height: 10),
         Card(
           child: ListTile(
+            leading: const Icon(Icons.insights_outlined),
+            title: const Text('Ma progression'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/progress'),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Card(
+          child: ListTile(
             leading: const Icon(Icons.download_for_offline_outlined),
             title: const Text('Téléchargements'),
             trailing: const Icon(Icons.chevron_right),

@@ -16,6 +16,7 @@ import 'features/courses/course_repository.dart';
 import 'features/courses/offline_course_service.dart';
 import 'features/courses/progress_service.dart';
 import 'features/downloads/download_service.dart';
+import 'features/notifications/notification_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,15 +31,31 @@ Future<void> main() async {
   await auth.init();
 
   final outbox = OutboxRepository(db);
-  // Aucun endpoint d'écriture (progression, chat) n'existe encore dans
-  // mobile_api : UnconfiguredGateway laisse tout en attente, sans rien simuler.
-  final sync = SyncService(outbox, UnconfiguredGateway());
-  await sync.start();
+  // Progression -> endpoint réel ; chat -> pas d'endpoint (reste en attente).
+  final sync = SyncService(outbox, ApiSyncGateway(api));
 
   final repo = CourseRepository(api, cache);
   final chat = ChatController(db, outbox, sync)..load();
   final downloads = DownloadService(db)..load();
-  final progress = ProgressService(db, outbox, sync)..load();
+  final progress = ProgressService(db, outbox, sync, api)..load();
+  sync.onItemRejected = (item) {
+    final id = item.payload['lesson_id'];
+    if (id is int) progress.handleRejected(id);
+  };
+  final notifications = NotificationService(api, cache, outbox, sync);
+  bool loggedIn() => auth.status == AuthStatus.authenticated;
+  sync.afterFlush = () async {
+    if (!loggedIn()) return;
+    await progress.pull();
+    await notifications.refresh(silent: true);
+  };
+  await notifications.loadCached();
+  notifications.startPolling(loggedIn);
+  // À chaque connexion réussie : envoyer la file puis récupérer progression/notifications.
+  auth.addListener(() {
+    if (loggedIn()) sync.flush();
+  });
+  await sync.start();
   final offline = OfflineCourseService(db, repo, cache)..load();
 
   runApp(MultiProvider(
@@ -50,6 +67,7 @@ Future<void> main() async {
       ChangeNotifierProvider.value(value: downloads),
       ChangeNotifierProvider.value(value: progress),
       ChangeNotifierProvider.value(value: offline),
+      ChangeNotifierProvider.value(value: notifications),
       Provider<ApiClient>.value(value: api),
       Provider<CourseRepository>.value(value: repo),
     ],
