@@ -1,0 +1,77 @@
+name: Dezipe ak Build APK
+
+on:
+  push:
+    paths:
+      - "upload/*.zip"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  dezipe:
+    runs-on: ubuntu-latest
+    outputs:
+      found: ${{ steps.unzip.outputs.found }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: unzip
+        name: Dezipe fichye zip yo
+        run: |
+          shopt -s nullglob
+          zips=(upload/*.zip)
+          if [ ${#zips[@]} -eq 0 ]; then
+            echo "found=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          mkdir /tmp/x
+          for z in "${zips[@]}"; do unzip -o -q "$z" -d /tmp/x; done
+          # si zip la gen yon sèl dosye rasin, nou pran sa ki andedan l
+          if [ "$(ls -A /tmp/x | wc -l)" = "1" ] && [ -d "/tmp/x/$(ls -A /tmp/x)" ]; then
+            src="/tmp/x/$(ls -A /tmp/x)"
+          else
+            src=/tmp/x
+          fi
+          rm -rf "$src/.github"   # GitHub pa pèmèt Action modifye workflows
+          cp -a "$src"/. .
+          git rm -q upload/*.zip
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add -A
+          git commit -m "Dezipe pwojè a otomatikman"
+          git push
+          echo "found=true" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: dezipe
+    if: needs.dezipe.outputs.found == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Kreye dosye android si li pa la
+        run: |
+          if [ ! -d android ]; then
+            flutter create --platforms=android --project-name educadim --org com.dimensionproduction .
+          fi
+          M=android/app/src/main/AndroidManifest.xml
+          grep -q 'android.permission.INTERNET' $M || sed -i 's#<application#<uses-permission android:name="android.permission.INTERNET"/>\n    <application#' $M
+          sed -i 's#android:label="[^"]*"#android:label="EducaDim"#' $M
+      - run: flutter pub get
+      - run: flutter analyze || true
+      - run: flutter test || true
+      - run: flutter build apk --release --dart-define=API_BASE_URL=https://educadim.onrender.com/api/v1/
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-${{ github.run_number }}
+          name: EducaDim APK #${{ github.run_number }}
+          files: build/app/outputs/flutter-apk/app-release.apk
