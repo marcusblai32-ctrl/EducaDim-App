@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/widgets/common.dart';
+import '../courses/offline_course_service.dart';
 import 'download_service.dart';
 
 String formatBytes(int b) {
@@ -25,17 +27,16 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
   @override
   Widget build(BuildContext context) {
     final s = context.watch<DownloadService>();
+    final oc = context.watch<OfflineCourseService>();
     return Scaffold(
       appBar: AppBar(title: const Text('Téléchargements')),
-      body: s.items.isEmpty
+      body: (s.items.isEmpty && oc.courses.isEmpty)
           ? const EmptyState(
               icon: Icons.download_for_offline_outlined,
               title: 'Aucun contenu téléchargé',
               message:
-                  'Les contenus de cours téléchargés apparaîtront ici et resteront '
-                  'disponibles sans connexion. Le catalogue de ressources '
-                  'téléchargeables dépend des endpoints du backend '
-                  '(voir docs/API_CONTRACT.md).')
+                  'Ouvrez un cours auquel vous avez accès et touchez « Télécharger '
+                  'le cours » pour le lire sans connexion.')
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
@@ -43,12 +44,36 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     const Eyebrow('Stockage local', color: Color(0xFF83DCE5)),
                     const SizedBox(height: 6),
-                    Text('${s.items.length} contenu(s) · ${formatBytes(s.totalBytes)}',
+                    Text('${oc.courses.length} cours · ${s.items.length} fichier(s) · ${formatBytes(s.totalBytes)}',
                         style: const TextStyle(
                             color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)),
                   ]),
                 ),
                 const SizedBox(height: 14),
+                if (oc.courses.isNotEmpty) ...[
+                  const Text('Cours hors ligne',
+                      style: TextStyle(fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 8),
+                  for (final c in oc.courses)
+                    Card(
+                      child: ListTile(
+                        leading: const Icon(Icons.menu_book_outlined),
+                        title: Text(c.title),
+                        subtitle: Text(
+                            '${c.lessons} leçon(s) lisible(s) hors ligne'
+                            '${c.skipped > 0 ? ' · ${c.skipped} verrouillée(s) par un quiz' : ''}'),
+                        onTap: () => context.push('/course/${c.courseId}'),
+                        trailing: IconButton(
+                          tooltip: 'Supprimer',
+                          icon: const Icon(Icons.delete_outline),
+                          onPressed: () => oc.remove(c.courseId),
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 14),
+                ],
+                if (s.items.isNotEmpty)
+                  const Text('Fichiers', style: TextStyle(fontWeight: FontWeight.w800)),
                 for (final d in s.items)
                   Card(
                     child: ListTile(

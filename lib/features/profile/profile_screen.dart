@@ -13,11 +13,32 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeController>();
     final sync = context.watch<SyncService>();
+    final auth = context.watch<AuthController>();
     return SafeArea(
       child: ListView(padding: const EdgeInsets.all(16), children: [
-        const PageHeader('Espace personnel', 'Mon profil',
-            subtitle: 'Les informations de compte seront chargées depuis le '
-                'serveur dès que l’endpoint de profil sera confirmé.'),
+        const PageHeader('Espace personnel', 'Mon profil'),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(auth.fullName.isEmpty ? 'Utilisateur' : auth.fullName,
+                  style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 4),
+              Text(auth.email),
+              if (auth.user?['user_id'] != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text('Identifiant : ${auth.user!['user_id']}'),
+                ),
+              if ((auth.user?['active_subscriptions'] as List?)?.isNotEmpty ?? false)
+                const Padding(
+                  padding: EdgeInsets.only(top: 8),
+                  child: Text('Abonnement actif', style: TextStyle(fontWeight: FontWeight.w800)),
+                ),
+            ]),
+          ),
+        ),
+        const SizedBox(height: 10),
         Card(
           child: Padding(
             padding: const EdgeInsets.all(16),

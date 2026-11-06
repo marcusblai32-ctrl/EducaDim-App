@@ -19,6 +19,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _pw = TextEditingController();
   bool _busy = false, _hide = true;
   String? _error;
+  String? _diag;
+  bool _slow = false;
 
   @override
   void dispose() {
@@ -32,14 +34,25 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() {
       _busy = true;
       _error = null;
+      _slow = false;
+    });
+    final slow = Future.delayed(const Duration(seconds: 8), () {
+      if (mounted && _busy) setState(() => _slow = true);
     });
     try {
       await context.read<AuthController>().login(_id.text, _pw.text);
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } finally {
+      slow.ignore();
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  Future<void> _diagnose() async {
+    setState(() => _diag = 'Test en cours… (jusqu’à 1 minute)');
+    final r = await context.read<AuthController>().diagnose();
+    if (mounted) setState(() => _diag = r);
   }
 
   @override
@@ -60,14 +73,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text.rich(TextSpan(
-                          text: 'Educa',
-                          style: t.textTheme.headlineMedium,
-                          children: const [
-                            TextSpan(text: 'Dim', style: TextStyle(color: EdColors.red))
-                          ],
-                        )),
-                        const SizedBox(height: 22),
+                        Center(
+                          child: Image.asset('assets/logo.png',
+                              height: 96, semanticLabel: 'Logo EducaDim'),
+                        ),
+                        const SizedBox(height: 14),
                         const PageHeader('Bon retour', 'Connectez-vous',
                             subtitle:
                                 'Accédez à vos formations et reprenez votre apprentissage.'),
@@ -76,7 +86,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           keyboardType: TextInputType.emailAddress,
                           autofillHints: const [AutofillHints.username],
                           decoration:
-                              const InputDecoration(labelText: 'Adresse e-mail'),
+                              const InputDecoration(labelText: 'E-mail ou identifiant (user_id)'),
                           validator: (v) =>
                               (v == null || v.trim().isEmpty) ? 'Champ requis' : null,
                         ),
@@ -105,6 +115,11 @@ class _LoginScreenState extends State<LoginScreen> {
                               style: const TextStyle(
                                   color: EdColors.red, fontWeight: FontWeight.w700)),
                         ],
+                        if (_busy && _slow) ...[
+                          const SizedBox(height: 12),
+                          const Text(
+                              'Le serveur se réveille, cela peut prendre jusqu’à 1 minute…'),
+                        ],
                         const SizedBox(height: 18),
                         FilledButton(
                           onPressed: _busy ? null : _submit,
@@ -124,6 +139,15 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           child: const Text('Créer un compte (site EducaDim)'),
                         ),
+                        TextButton(
+                          onPressed: _diagnose,
+                          child: const Text('Tester la connexion au serveur'),
+                        ),
+                        if (_diag != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(_diag!, style: const TextStyle(height: 1.4)),
+                          ),
                       ],
                     ),
                   ),

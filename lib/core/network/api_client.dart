@@ -13,7 +13,7 @@ class ApiClient {
               baseUrl: ApiConfig.baseUrl,
               connectTimeout: ApiConfig.connectTimeout,
               receiveTimeout: ApiConfig.receiveTimeout,
-              headers: {'Accept': 'application/json'},
+              headers: {'Accept': 'application/json', 'Accept-Language': 'fr'},
             )) {
     this.dio.interceptors.add(InterceptorsWrapper(
       onRequest: (o, h) async {

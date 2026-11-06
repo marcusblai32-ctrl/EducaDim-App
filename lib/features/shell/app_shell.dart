@@ -25,11 +25,15 @@ class AppShell extends StatelessWidget {
     final t = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text.rich(TextSpan(
-          text: 'Educa',
-          style: t.textTheme.titleLarge,
-          children: const [TextSpan(text: 'Dim', style: TextStyle(color: EdColors.red))],
-        )),
+        title: Row(mainAxisSize: MainAxisSize.min, children: [
+          Image.asset('assets/logo.png', height: 32),
+          const SizedBox(width: 8),
+          Text.rich(TextSpan(
+            text: 'Educa',
+            style: t.textTheme.titleLarge,
+            children: const [TextSpan(text: 'Dim', style: TextStyle(color: EdColors.red))],
+          )),
+        ]),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 14),

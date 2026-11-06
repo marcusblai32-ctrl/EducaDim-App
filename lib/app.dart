@@ -6,7 +6,10 @@ import 'core/theme/theme_controller.dart';
 import 'features/auth/auth_controller.dart';
 import 'features/auth/login_screen.dart';
 import 'features/chat/chat_screen.dart';
-import 'features/courses/courses_screens.dart';
+import 'features/courses/course_detail_screen.dart';
+import 'features/courses/explore_screen.dart';
+import 'features/courses/lesson_screen.dart';
+import 'features/courses/my_courses_screen.dart';
 import 'features/downloads/downloads_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/notifications/notifications_screen.dart';
@@ -40,6 +43,14 @@ GoRouter buildRouter(AuthController auth) => GoRouter(
         ),
         GoRoute(path: '/downloads', builder: (_, __) => const DownloadsScreen()),
         GoRoute(path: '/chat', builder: (_, __) => const ChatScreen()),
+        GoRoute(
+          path: '/course/:id',
+          builder: (_, st) => CourseDetailScreen(int.parse(st.pathParameters['id']!)),
+        ),
+        GoRoute(
+          path: '/lesson/:id',
+          builder: (_, st) => LessonScreen(int.parse(st.pathParameters['id']!)),
+        ),
       ],
     );
 

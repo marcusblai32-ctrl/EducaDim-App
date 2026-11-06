@@ -5,20 +5,20 @@ class ApiConfig {
     'API_BASE_URL',
     defaultValue: 'https://educadim.onrender.com/api/v1/',
   );
+  static const String siteUrl = 'https://educadim.onrender.com';
   static const String signupWebUrl =
       'https://educadim.onrender.com/fr/accounts/inscription/';
-  static const Duration connectTimeout = Duration(seconds: 20);
-  static const Duration receiveTimeout = Duration(seconds: 30);
+  static const Duration connectTimeout = Duration(seconds: 60);
+  static const Duration receiveTimeout = Duration(seconds: 60);
 }
 
-/// Contrat API. Seul `loginPath` est confirmé par le cahier des charges.
-/// Chaque valeur marquée "À VÉRIFIER" n'a PAS pu être confrontée au backend
-/// et doit être validée avec le dépôt Django (voir docs/API_CONTRACT.md).
+/// Contrat API confirmé d'après mobile_api/ du dépôt Django (urls, views,
+/// serializers, README).
 class ApiContract {
   static const String loginPath = 'auth/login/'; // confirmé (POST)
-  static const String loginIdentifierField = 'email'; // À VÉRIFIER (email|username)
-  static const String loginPasswordField = 'password'; // À VÉRIFIER
-  static const String accessTokenKey = 'access'; // À VÉRIFIER (SimpleJWT usuel)
-  static const String refreshTokenKey = 'refresh'; // À VÉRIFIER
-  static const String refreshPath = 'auth/refresh/'; // À VÉRIFIER
+  static const String loginIdentifierField = 'username'; // confirmé : e-mail OU user_id
+  static const String loginPasswordField = 'password'; // confirmé
+  static const String accessTokenKey = 'access'; // confirmé
+  static const String refreshTokenKey = 'refresh'; // confirmé (rotation activée)
+  static const String refreshPath = 'auth/token/refresh/'; // confirmé
 }

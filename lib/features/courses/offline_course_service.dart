@@ -1,0 +1,88 @@
+import 'package:flutter/foundation.dart';
+import '../../core/db/app_database.dart';
+import '../../core/db/cache_store.dart';
+import '../../core/network/api_exception.dart';
+import 'course_repository.dart';
+
+class OfflineCourse {
+  OfflineCourse(this.courseId, this.title, this.lessons, this.skipped, this.createdAt);
+  final int courseId;
+  final String title;
+  final int lessons, skipped;
+  final DateTime createdAt;
+}
+
+/// Rend un cours lisible hors ligne : structure + contenu texte/URL de chaque
+/// leçon sont mis en cache en SQLite. Les fichiers médias eux-mêmes (vidéo,
+/// audio, PDF) ne sont PAS téléchargés : le backend n'expose pas encore
+/// d'endpoint `manifest` / URL signées (voir docs/API_CONTRACT.md).
+class OfflineCourseService extends ChangeNotifier {
+  OfflineCourseService(this._db, this._repo, this._cache);
+  final AppDatabase _db;
+  final CourseRepository _repo;
+  final CacheStore _cache;
+
+  List<OfflineCourse> courses = [];
+  int? busyCourseId;
+  int progressDone = 0, progressTotal = 0;
+
+  bool isOffline(int courseId) => courses.any((c) => c.courseId == courseId);
+
+  Future<void> load() async {
+    final rows = await _db.db.query('offline_courses', orderBy: 'created_at DESC');
+    courses = rows
+        .map((r) => OfflineCourse(
+              r['course_id'] as int,
+              r['title'] as String,
+              r['lessons'] as int,
+              r['skipped'] as int,
+              DateTime.fromMillisecondsSinceEpoch(r['created_at'] as int),
+            ))
+        .toList();
+    notifyListeners();
+  }
+
+  Future<void> download(int courseId, String title) async {
+    if (busyCourseId != null) return;
+    busyCourseId = courseId;
+    progressDone = 0;
+    notifyListeners();
+    try {
+      await _repo.detail(courseId);
+      final cur = await _repo.curriculum(courseId);
+      final lessons = cur.value.allLessons;
+      progressTotal = lessons.length;
+      var skipped = 0;
+      for (final l in lessons) {
+        try {
+          await _repo.lesson(l.id);
+        } on LessonQuizRequired {
+          skipped++; // leçon verrouillée par un quiz à réussir
+        }
+        progressDone++;
+        notifyListeners();
+      }
+      await _db.db.rawInsert(
+        'INSERT OR REPLACE INTO offline_courses(course_id,title,lessons,skipped,created_at) VALUES(?,?,?,?,?)',
+        [courseId, title, lessons.length - skipped, skipped, DateTime.now().millisecondsSinceEpoch],
+      );
+      await load();
+    } finally {
+      busyCourseId = null;
+      notifyListeners();
+    }
+  }
+
+  Future<void> remove(int courseId) async {
+    final cur = await _cache.get('curriculum:$courseId');
+    if (cur != null) {
+      try {
+        for (final l in (await _repo.curriculumFromJson(cur)).allLessons) {
+          await _cache.delete('lesson:${l.id}');
+        }
+      } catch (_) {}
+    }
+    await _db.db.delete('offline_courses', where: 'course_id = ?', whereArgs: [courseId]);
+    await load();
+  }
+}

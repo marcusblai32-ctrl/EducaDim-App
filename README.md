@@ -1,41 +1,39 @@
-# EducaDim — client Flutter (fondation)
+# EducaDim — client Flutter
 
-Client mobile du backend Django existant (`https://educadim.onrender.com/api/v1/`).
-Prototype de référence : `reference/index.html` (palette, typographies, structure).
+Client mobile du backend Django existant (`https://educadim.onrender.com/api/v1/`),
+construit sur l'API `mobile_api/` du dépôt. Prototype de référence : `reference/index.html`.
 
-> **État honnête** : fondation fonctionnelle, **non compilée ni testée** dans
-> l'environnement de création (pas de Flutter SDK ni d'accès réseau). Le contrat
-> JSON du backend n'a pas pu être lu ; voir `docs/API_CONTRACT.md`.
+> **État honnête** : le code a été écrit **sans pouvoir exécuter Flutter** (pas de SDK ni
+> de réseau dans l'environnement). `flutter analyze`, `flutter test` et la compilation
+> n'ont **pas** été lancés ; des corrections mineures peuvent être nécessaires au premier
+> build. Flutter ≥ 3.27 requis (`withValues`, `CardThemeData`).
 
-## Opérationnel (côté app)
-- Connexion JWT (`POST auth/login/`), jetons dans le stockage sécurisé, refresh
-  automatique unique sur 401, déconnexion, redirection si session expirée.
-- Routes privées protégées (go_router), navigation 5 onglets, bouton chat flottant.
-- Thème fidèle au prototype, clair/sombre/auto, interface en français.
-- SQLite : file d'attente `outbox` (id client stable, anti-doublon, jamais
-  supprimée avant confirmation), chat local, téléchargements.
-- Synchronisation : détection du retour réseau (connectivity_plus), flush
-  automatique et manuel, indicateurs (Hors ligne / n en attente / À jour).
-- Chat : historique local, envoi hors ligne mis en attente.
-- Téléchargements : service de téléchargement/suppression + écran (stockage utilisé).
-- Tests unitaires : `test/outbox_sync_test.dart`.
+## Fonctionnalités opérationnelles (contre l'API réelle)
+- Connexion (e-mail ou user_id), jetons JWT en stockage sécurisé, refresh avec rotation
+  (un seul refresh concurrent), session expirée → retour à la connexion, déconnexion.
+- Accueil personnalisé (prénom, reprise de la dernière leçon, recommandations, statistiques locales).
+- Explorer : catalogue paginé côté serveur, recherche, filtre gratuit/payant, détail, prérequis, état d'accès.
+- Mes cours : cours accessibles (inscription active, abonnement, gratuit).
+- Programme (unités/modules/leçons) et lecteur de leçon : textes, images, liens, PDF/audio/vidéo
+  (ouverture externe + téléchargement fichier).
+- Gestion des 403 métier (`course_access_required`, `lesson_quiz_required`).
+- Hors ligne : cache SQLite des réponses, « Télécharger le cours » (structure + contenu des
+  leçons), bandeau « hors ligne », progression de leçon enregistrée localement.
+- File d'attente (`outbox`) idempotente + service de synchronisation automatique au retour du réseau.
+- Chat local avec envoi différé ; profil ; thème clair/sombre ; téléchargements (liste, taille, suppression).
 
-## Nécessite le backend / un contrat confirmé
-Catalogue, détail de cours, inscriptions, leçons/quiz/flashcards, progression
-distante, profil, chat serveur, notifications/push. Les écrans correspondants
-affichent un état explicite « connexion à finaliser » (aucune donnée fictive).
-Inscription : ouvre la page web officielle (aucun endpoint d'inscription confirmé).
+## Dépend d'endpoints absents du backend
+Progression distante, quiz, flashcards, chat serveur, notifications/push, certificats,
+inscription in-app, manifest/URL signées pour médias. Détail : `docs/API_CONTRACT.md`.
+Tant que `UnconfiguredGateway` est en place, ces données restent en file locale, jamais supprimées.
 
-## Lancer
+## Lancer / compiler
 ```
 flutter create --platforms=android --project-name educadim --org com.dimensionproduction .
-# ajouter <uses-permission android:name="android.permission.INTERNET"/> dans
-# android/app/src/main/AndroidManifest.xml (le workflow CI le fait automatiquement)
-flutter pub get
-flutter analyze && flutter test
+# ajouter <uses-permission android:name="android.permission.INTERNET"/> au manifeste Android
+flutter pub get && flutter analyze && flutter test
 flutter run --dart-define=API_BASE_URL=https://educadim.onrender.com/api/v1/
 flutter build apk --release
 ```
-APK automatique : workflow `.github/workflows/android.yml` (artefact `educadim-apk`).
-Polices : DM Sans / Manrope via `google_fonts` (téléchargées au premier usage ;
-embarquez-les dans `assets/` pour un usage 100 % hors ligne).
+APK automatique : `.github/workflows/android.yml` (artefact `educadim-apk`).
+Le serveur Render gratuit peut mettre ~30 s à se réveiller : les délais sont de 20 s/30 s, relancez si besoin.
