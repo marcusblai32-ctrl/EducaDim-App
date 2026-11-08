@@ -64,8 +64,11 @@ class OfflineCourseService extends ChangeNotifier {
         notifyListeners();
       }
       try {
-        await _repo.flashcards(courseId);
-      } catch (_) {} // endpoint absent ou cours sans flashcards
+        final fc = await _repo.courseFlashcards(courseId);
+        for (final m in fc.value.modules) {
+          await _repo.moduleFlashcards(m.moduleId);
+        }
+      } catch (_) {} // cours sans flashcards ou fonctionnalité indisponible
       try {
         final qs = await _repo.quizzes(courseId);
         for (final q in qs.value.where((q) => q.compatible)) {
@@ -91,6 +94,12 @@ class OfflineCourseService extends ChangeNotifier {
           await _cache.delete('lesson:${l.id}');
         }
       } catch (_) {}
+    }
+    final fcCached = await _cache.get('flashcards:$courseId');
+    if (fcCached != null) {
+      for (final m in CourseFlashcards.fromJson(fcCached).modules) {
+        await _cache.delete('flashcards:module:${m.moduleId}');
+      }
     }
     await _cache.delete('flashcards:$courseId');
     final qc = await _cache.get('quizzes:$courseId');

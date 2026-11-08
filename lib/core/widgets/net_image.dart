@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import '../i18n/text.dart';
 import '../theme/colors.dart';
 
 /// En-têtes « navigateur » : certains CDN (Cloudflare/R2 avec protection anti-bots
@@ -37,7 +38,9 @@ class NetImage extends StatelessWidget {
         fit: fit,
         width: double.infinity,
         memCacheWidth: (width * dpr).round().clamp(300, 1400),
-        fadeInDuration: const Duration(milliseconds: 150),
+        fadeInDuration: Duration.zero,
+        fadeOutDuration: Duration.zero,
+        placeholderFadeInDuration: Duration.zero,
         placeholder: (_, __) => Container(color: Theme.of(context).dividerColor.withValues(alpha: 0.4)),
         errorWidget: (ctx, failedUrl, error) => _Fallback(url: failedUrl, error: error),
       );
@@ -56,17 +59,12 @@ class _Fallback extends StatelessWidget {
     return GestureDetector(
       onTap: error == null
           ? null
-          : () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              duration: const Duration(seconds: 6),
-              content: Text('Image indisponible.\n${error.toString().split('\n').first}\n$url'))),
+          : () => ScaffoldMessenger.of(context).showSnackBar(snackBarAnimationStyle: AnimationStyle.noAnimation,
+              SnackBar(content: Text(tr('Image indisponible pour le moment.')))),
       child: Container(
         width: double.infinity,
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [EdColors.navy, EdColors.blue],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          gradient: EdColors.hero,
         ),
         child: Center(
           child: Opacity(

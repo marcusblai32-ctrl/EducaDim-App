@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import '../../core/i18n/text.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:open_filex/open_filex.dart';
@@ -43,9 +44,9 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
               children: [
                 HeroCard(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    const Eyebrow('Stockage local', color: Color(0xFF83DCE5)),
+                    const Eyebrow('Stockage local', color: Color(0xFFB9C2FF)),
                     const SizedBox(height: 6),
-                    Text('${oc.courses.length} cours · ${s.items.length} fichier(s) · ${formatBytes(s.totalBytes)}',
+                    Text(tr('{c} cours · {f} fichier(s) · {b}', {'c': oc.courses.length, 'f': s.items.length, 'b': formatBytes(s.totalBytes)}),
                         style: const TextStyle(
                             color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)),
                   ]),
@@ -60,12 +61,12 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                       child: ListTile(
                         leading: const Icon(Icons.menu_book_outlined),
                         title: Text(c.title),
-                        subtitle: Text(
-                            '${c.lessons} leçon(s) lisible(s) hors ligne'
-                            '${c.skipped > 0 ? ' · ${c.skipped} verrouillée(s) par un quiz' : ''}'),
+                        subtitle: Text(c.skipped > 0
+                            ? tr('{n} leçon(s) lisible(s) hors ligne · {k} verrouillée(s) par un quiz', {'n': c.lessons, 'k': c.skipped})
+                            : tr('{n} leçon(s) lisible(s) hors ligne', {'n': c.lessons})),
                         onTap: () => context.push('/course/${c.courseId}'),
                         trailing: IconButton(
-                          tooltip: 'Supprimer',
+                          tooltip: tr('Supprimer'),
                           icon: const Icon(Icons.delete_outline),
                           onPressed: () => oc.remove(c.courseId),
                         ),
@@ -80,16 +81,16 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                     child: ListTile(
                       leading: const Icon(Icons.offline_pin_outlined),
                       title: Text(d.title),
-                      subtitle: Text('${formatBytes(d.bytes)} · Touchez pour ouvrir'),
+                      subtitle: Text(tr('{b} · Touchez pour ouvrir', {'b': formatBytes(d.bytes)})),
                       onTap: () async {
                         final r = await OpenFilex.open(d.path);
                         if (r.type != ResultType.done && context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          ScaffoldMessenger.of(context).showSnackBar(snackBarAnimationStyle: AnimationStyle.noAnimation, const SnackBar(
                               content: Text('Aucune application disponible pour ouvrir ce fichier.')));
                         }
                       },
                       trailing: IconButton(
-                        tooltip: 'Supprimer',
+                        tooltip: tr('Supprimer'),
                         icon: const Icon(Icons.delete_outline),
                         onPressed: () => s.remove(d.id),
                       ),

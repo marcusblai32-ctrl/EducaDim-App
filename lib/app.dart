@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'core/i18n/lang.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
 import 'features/auth/auth_controller.dart';
@@ -63,7 +65,8 @@ GoRouter buildRouter(AuthController auth) => GoRouter(
         GoRoute(
           path: '/admin/quiz/:id/question',
           builder: (_, st) => AdminQuestionScreen(int.parse(st.pathParameters['id']!),
-              title: st.extra is String ? st.extra as String : null),
+              title: st.extra is String ? st.extra as String : null,
+              questionId: int.tryParse(st.uri.queryParameters['edit'] ?? '')),
         ),
         GoRoute(
           path: '/course/:id',
@@ -71,7 +74,13 @@ GoRouter buildRouter(AuthController auth) => GoRouter(
         ),
         GoRoute(
           path: '/flashcards/:id',
-          builder: (_, st) => FlashcardsScreen(int.parse(st.pathParameters['id']!)),
+          builder: (_, st) => FlashcardsScreen(courseId: int.parse(st.pathParameters['id']!)),
+        ),
+        GoRoute(
+          path: '/module-flashcards/:id',
+          builder: (_, st) => FlashcardsScreen(
+              moduleId: int.parse(st.pathParameters['id']!),
+              title: st.extra is String ? st.extra as String : null),
         ),
         GoRoute(
           path: '/course/:id/quizzes',
@@ -113,14 +122,29 @@ class _EducaDimAppState extends State<EducaDimApp> {
   @override
   Widget build(BuildContext context) {
     final mode = context.watch<ThemeController>().mode;
-    return MaterialApp.router(
-      title: 'EducaDim',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      themeMode: mode,
-      locale: const Locale('fr'),
-      routerConfig: _router,
+    // Changer de langue reconstruit tout l'écran (textes + contenu rechargé dans la nouvelle langue).
+    return ListenableBuilder(
+      listenable: Lang.instance,
+      builder: (context, _) => MaterialApp.router(
+        title: 'EducaDim',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
+        themeMode: mode,
+        themeAnimationDuration: Duration.zero, // aucune animation
+        // Les composants du framework (boutons « OK », date…) utilisent le français ;
+        // les textes de l'application suivent la langue choisie (Lang).
+        locale: const Locale('fr'),
+        supportedLocales: const [Locale('fr'), Locale('en')],
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        routerConfig: _router,
+        builder: (context, child) =>
+            KeyedSubtree(key: ValueKey(Lang.instance.code), child: child ?? const SizedBox.shrink()),
+      ),
     );
   }
 }

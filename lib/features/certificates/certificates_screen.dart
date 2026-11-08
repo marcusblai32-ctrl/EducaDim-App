@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import '../../core/i18n/text.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/db/cache_store.dart';
@@ -82,8 +83,7 @@ class _CertificatesScreenState extends State<CertificatesScreen> {
             return await repo.list();
           } on ApiException catch (e) {
             if (e.statusCode == 404) {
-              throw ApiException('Les certificats ne sont pas encore disponibles sur le serveur '
-                  '(mise à jour du backend nécessaire).');
+              throw ApiException(tr('Cette fonctionnalité n’est pas disponible pour le moment.'));
             }
             rethrow;
           }
@@ -108,19 +108,19 @@ class _CertificatesScreenState extends State<CertificatesScreen> {
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Row(children: [
                           Icon(Icons.workspace_premium_outlined,
-                              color: c.status == 'issued' ? EdColors.good : EdColors.blue),
+                              color: c.status == 'issued' ? EdColors.good : null),
                           const SizedBox(width: 10),
                           Expanded(child: Text(c.courseTitle, style: t.textTheme.titleMedium)),
                         ]),
                         const SizedBox(height: 6),
-                        Text('${c.statusLabel} · N° ${c.number}',
+                        Text(tr('{s} · N° {n}', {'s': c.statusLabel, 'n': c.number}),
                             style: TextStyle(color: t.colorScheme.onSurface.withValues(alpha: 0.65))),
                         const SizedBox(height: 4),
-                        Text('Nom : ${c.studentName}'),
-                        if (c.issuedAt != null) Text('Délivré le ${formatDate(c.issuedAt)}'),
+                        Text(tr('Nom : {x}', {'x': c.studentName})),
+                        if (c.issuedAt != null) Text(tr('Délivré le {d}', {'d': formatDate(c.issuedAt)})),
                         if ((c.reviewNote ?? '').isNotEmpty) ...[
                           const SizedBox(height: 6),
-                          Text('Note de l’équipe : ${c.reviewNote}',
+                          Text(tr('Note de l’équipe : {x}', {'x': c.reviewNote}),
                               style: const TextStyle(fontStyle: FontStyle.italic)),
                         ],
                         const SizedBox(height: 12),

@@ -1,5 +1,6 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import '../../core/i18n/text.dart';
 import 'package:provider/provider.dart';
 import '../../core/widgets/async_view.dart';
 import '../../core/widgets/common.dart';
@@ -48,7 +49,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
               onChanged: _onQuery,
               textInputAction: TextInputAction.search,
               decoration: InputDecoration(
-                hintText: 'Rechercher un cours ou un sujet…',
+                hintText: tr('Rechercher un cours ou un sujet…'),
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _ctrl.text.isEmpty
                     ? null
@@ -88,7 +89,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
               return RefreshIndicator(
                 onRefresh: reload,
                 child: ListView.separated(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
                   itemCount: courses.length + (r.fromCache ? 1 : 0),
                   separatorBuilder: (_, __) => const SizedBox(height: 14),
                   itemBuilder: (_, i) {

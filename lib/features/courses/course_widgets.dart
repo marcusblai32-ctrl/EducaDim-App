@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:go_router/go_router.dart';
+import '../../core/i18n/text.dart';
 import '../../core/theme/colors.dart';
 import '../../core/widgets/net_image.dart';
 import 'models.dart';
@@ -47,18 +48,56 @@ class CourseCard extends StatelessWidget {
               Text(course.titre, style: t.textTheme.titleMedium),
               const SizedBox(height: 6),
               Text(
-                '${course.duree} h · ${course.access.hasAccess ? (course.access.source == 'free' ? 'Gratuit' : 'Inscrit') : course.prixLabel}',
+                '${course.duree} h · ${course.access.hasAccess ? (course.access.source == 'free' ? tr('Gratuit') : tr('Inscrit')) : course.prixLabel}',
                 style: TextStyle(fontSize: 12, color: muted),
               ),
               if (doneLessons != null && doneLessons! > 0) ...[
                 const SizedBox(height: 8),
-                Text('$doneLessons leçon(s) terminée(s)',
+                Text(tr('{n} leçon(s) terminée(s)', {'n': doneLessons}),
                     style: const TextStyle(
                         fontSize: 12, color: EdColors.good, fontWeight: FontWeight.w700)),
               ],
             ]),
           ),
         ]),
+      ),
+    );
+  }
+}
+
+/// Carte horizontale compacte (carrousel de recommandations).
+class CourseCardCompact extends StatelessWidget {
+  const CourseCardCompact(this.course, {super.key});
+  final Course course;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    return SizedBox(
+      width: 250,
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => context.push('/course/${course.id}'),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            NetImage(course.image, aspectRatio: 16 / 10),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(course.titre,
+                    maxLines: 2, overflow: TextOverflow.ellipsis, style: t.textTheme.titleSmall),
+                const SizedBox(height: 6),
+                Text(
+                  '${course.duree} h · ${course.prixLabel}',
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: t.colorScheme.primary),
+                ),
+              ]),
+            ),
+          ]),
+        ),
       ),
     );
   }
@@ -89,12 +128,12 @@ class OfflineBanner extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: const Color(0xFFFFF5E6),
+          color: EdColors.warn.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(12),
         ),
         child: const Text(
           'Hors ligne : données enregistrées lors de votre dernière connexion.',
-          style: TextStyle(fontSize: 12, color: Color(0xFF875315)),
+          style: TextStyle(fontSize: 12, color: EdColors.warn),
         ),
       );
 }

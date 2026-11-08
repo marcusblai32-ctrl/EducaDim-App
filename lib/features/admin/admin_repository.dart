@@ -75,6 +75,16 @@ class AdminRepository {
       (await _send('POST', 'admin/quizzes/', d)) as Map;
   Future<void> setQuizPublished(int id, bool v) =>
       _send('PATCH', 'admin/quizzes/$id/', {'publie': v});
+  Future<void> createFlashcard(int moduleId, Map<String, dynamic> d) =>
+      _send('POST', 'admin/modules/$moduleId/flashcards/', d);
+
+  /// Champs éditables d'un élément : kind = course|unite|module|lecon|section|contenu|quiz|question|flashcard
+  Future<Map> item(String kind, int id) async =>
+      ((await _get('admin/items/$kind/$id/')) as Map)['fields'] as Map;
+  Future<void> updateItem(String kind, int id, Map<String, dynamic> d) =>
+      _send('PATCH', 'admin/items/$kind/$id/', d);
+  Future<void> deleteItem(String kind, int id) => _send('DELETE', 'admin/items/$kind/$id/', {});
+
   Future<Map> addQuestion(int quizId, Map<String, dynamic> d) async =>
       (await _send('POST', 'admin/quizzes/$quizId/questions/', d)) as Map;
 }

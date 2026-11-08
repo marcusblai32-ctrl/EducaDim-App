@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import '../db/outbox_repository.dart';
+import '../i18n/lang.dart';
 import 'sync_gateway.dart';
 
 /// Vide la file d'attente dès que la connexion revient.
@@ -73,23 +74,21 @@ class SyncService extends ChangeNotifier {
           out = await _gateway.push(item);
         } catch (e) {
           await _outbox.markFailed(item.id, e.toString());
-          _note = 'Erreur réseau : nouvel essai automatique plus tard.';
+          _note = tr('Connexion instable : nouvel essai automatique plus tard.');
           break;
         }
         if (out == PushOutcome.synced) {
           await _outbox.markSynced(item.id);
           onItemSynced?.call(item);
         } else if (out == PushOutcome.rejected) {
-          await _outbox.markRejected(item.id, 'refusé par le serveur');
+          await _outbox.markRejected(item.id, 'rejected');
           onItemRejected?.call(item);
-          _note = 'Un élément a été refusé par le serveur (accès ou quiz requis).';
+          _note = tr('Une action n’a pas pu être validée (accès ou quiz requis).');
         } else if (out == PushOutcome.unavailable) {
-          // Pas d'endpoint pour ce type : on passe aux suivants sans le perdre.
-          _note = "Certains éléments (ex. chat) n'ont pas encore d'endpoint "
-              'serveur. Ils restent sauvegardés.';
+          // Type d'opération non pris en charge : conservé tel quel, sans bruit pour l'utilisateur.
         } else {
           await _outbox.markFailed(item.id, 'retry');
-          _note = 'Serveur injoignable : nouvel essai automatique plus tard.';
+          _note = tr('Connexion instable : nouvel essai automatique plus tard.');
           break;
         }
       }

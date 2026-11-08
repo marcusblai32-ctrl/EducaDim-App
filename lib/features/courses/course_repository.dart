@@ -68,8 +68,11 @@ class CourseRepository {
   Future<Loaded<List<ActivityItem>>> activity() =>
       _get('me/activity/', 'me:activity', ActivityItem.listFromJson);
 
-  Future<Loaded<List<Flashcard>>> flashcards(int courseId) => _get(
-      'courses/$courseId/flashcards/', 'flashcards:$courseId', Flashcard.listFromJson);
+  Future<Loaded<CourseFlashcards>> courseFlashcards(int courseId) =>
+      _get('courses/$courseId/flashcards/', 'flashcards:$courseId', CourseFlashcards.fromJson);
+
+  Future<Loaded<List<Flashcard>>> moduleFlashcards(int moduleId) => _get(
+      'modules/$moduleId/flashcards/', 'flashcards:module:$moduleId', Flashcard.listFromJson);
 
   Future<Loaded<List<QuizSummary>>> quizzes(int courseId) =>
       _get('courses/$courseId/quizzes/', 'quizzes:$courseId', QuizSummary.listFromJson);

@@ -1,12 +1,15 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import '../i18n/text.dart';
 import '../network/api_exception.dart';
 import 'common.dart';
+import 'skeleton.dart';
 
-/// Charge une donnée asynchrone avec états chargement / erreur (avec réessai).
+/// Charge une donnée asynchrone : aperçu animé, erreur avec « Réessayer ».
 class AsyncView<T> extends StatefulWidget {
-  const AsyncView({super.key, required this.load, required this.builder});
+  const AsyncView({super.key, required this.load, required this.builder, this.skeleton});
   final Future<T> Function() load;
   final Widget Function(BuildContext, T, Future<void> Function() reload) builder;
+  final Widget? skeleton;
   @override
   State<AsyncView<T>> createState() => _AsyncViewState<T>();
 }
@@ -26,12 +29,12 @@ class _AsyncViewState<T> extends State<AsyncView<T>> {
         future: _f,
         builder: (context, snap) {
           if (snap.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
+            return widget.skeleton ?? const SkeletonList();
           }
           if (snap.hasError) {
             final msg = snap.error is ApiException
                 ? (snap.error as ApiException).message
-                : 'Une erreur est survenue.';
+                : tr('Une erreur est survenue.');
             return EmptyState(
               icon: Icons.cloud_off_rounded,
               title: 'Chargement impossible',

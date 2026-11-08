@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../../core/config/api_config.dart';
+import '../../core/i18n/lang.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/db/cache_store.dart';
@@ -56,7 +57,7 @@ class AuthController extends ChangeNotifier {
     } catch (_) {}
   }
 
-  /// Lance ApiException (message en français) en cas d'échec.
+  /// Lance ApiException (message traduit) en cas d'échec.
   Future<void> login(String identifier, String password) async {
     try {
       final res = await api.dio.post(
@@ -70,9 +71,7 @@ class AuthController extends ChangeNotifier {
       final d = res.data;
       final access = d is Map ? d[ApiContract.accessTokenKey] : null;
       if (access is! String) {
-        throw ApiException(
-            'Réponse de connexion inattendue : format du jeton à vérifier '
-            '(voir docs/API_CONTRACT.md).');
+        throw ApiException(tr('Connexion impossible pour le moment. Réessayez plus tard.'));
       }
       final refresh = d[ApiContract.refreshTokenKey];
       await _tokens.save(
@@ -87,42 +86,14 @@ class AuthController extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       if (e is DioException && e.response?.statusCode == 404) {
-        throw ApiException(
-            'API mobile introuvable (erreur 404). Le serveur n’a probablement '
-            'pas encore été mis à jour avec l’application « mobile_api » : '
-            'redéployez le backend sur Render.',
+        throw ApiException(tr('Connexion impossible pour le moment. Réessayez plus tard.'),
             statusCode: 404);
       }
       if (e is DioException && e.response == null && e.type == DioExceptionType.unknown) {
-        throw ApiException(
-            'Connexion impossible (${e.error ?? 'erreur réseau'}). '
-            'Vérifiez Internet ; si le problème persiste, réinstallez la dernière version de l’application.',
+        throw ApiException(tr('Connexion impossible. Vérifiez votre Internet et réessayez.'),
             isOffline: true);
       }
       throw ApiException.from(e);
-    }
-  }
-
-  /// Teste le serveur sans identifiants et explique le résultat en français.
-  Future<String> diagnose() async {
-    try {
-      final res = await api.dio.get('courses/',
-          options: Options(extra: {'noAuth': true}, validateStatus: (_) => true));
-      final code = res.statusCode ?? 0;
-      if (code == 401 || code == 403) {
-        return '✅ Serveur API joignable (réponse $code attendue sans connexion). '
-            'Le problème vient des identifiants.';
-      }
-      if (code == 404) {
-        return '❌ Erreur 404 : l’API mobile n’est pas déployée sur le serveur. '
-            'Redéployez le backend (avec mobile_api) sur Render.';
-      }
-      if (code >= 500) return '⚠️ Le serveur répond avec une erreur $code. Réessayez plus tard.';
-      return 'Réponse inattendue du serveur : $code.';
-    } on DioException catch (e) {
-      return '❌ Impossible de joindre ${ApiConfig.baseUrl} '
-          '(${e.type.name}). Vérifiez Internet, attendez 1 minute (le serveur '
-          'gratuit se réveille) puis réessayez.';
     }
   }
 

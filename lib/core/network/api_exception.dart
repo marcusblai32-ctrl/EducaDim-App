@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../i18n/lang.dart';
 
 /// Erreur lisible par l'utilisateur, en français.
 class ApiException implements Exception {
@@ -19,7 +20,7 @@ class ApiException implements Exception {
         case DioExceptionType.sendTimeout:
         case DioExceptionType.receiveTimeout:
           return ApiException(
-            'Connexion impossible. Vérifiez votre Internet et réessayez.',
+            tr('Connexion impossible. Vérifiez votre Internet et réessayez.'),
             isOffline: true,
           );
         default:
@@ -34,36 +35,36 @@ class ApiException implements Exception {
           ? data['code'] as String
           : null;
       if (status == 429) {
-        return ApiException('Trop de tentatives. Patientez une minute.',
+        return ApiException(tr('Trop de tentatives. Patientez une minute.'),
             statusCode: status, code: code);
       }
       if (status == 401) {
-        return ApiException(detail ?? 'Session expirée. Reconnectez-vous.',
+        return ApiException(detail ?? tr('Session expirée. Reconnectez-vous.'),
             statusCode: status, code: code);
       }
       if (status == 403) {
-        return ApiException(detail ?? 'Accès refusé.', statusCode: status, code: code);
+        return ApiException(detail ?? tr('Accès refusé.'), statusCode: status, code: code);
       }
       if (status == 400) {
-        return ApiException(detail ?? 'Données invalides.', statusCode: status);
+        return ApiException(detail ?? tr('Données invalides.'), statusCode: status);
       }
       if (status == 402) {
-        return ApiException(detail ?? 'Paiement requis.', statusCode: status, code: code);
+        return ApiException(detail ?? tr('Paiement requis.'), statusCode: status, code: code);
       }
       if (status == 409) {
-        return ApiException(detail ?? 'Action impossible pour le moment.',
+        return ApiException(detail ?? tr('Action impossible pour le moment.'),
             statusCode: status, code: code);
       }
       if (status == 404) {
-        return ApiException('Ressource introuvable sur le serveur.', statusCode: status);
+        return ApiException(tr('Contenu introuvable.'), statusCode: status);
       }
       if (status != null && status >= 500) {
         return ApiException(
-            'Le serveur est momentanément indisponible. Réessayez plus tard.',
+            tr('Service momentanément indisponible. Réessayez plus tard.'),
             statusCode: status);
       }
     }
-    return ApiException('Une erreur est survenue. Réessayez.');
+    return ApiException(tr('Une erreur est survenue. Réessayez.'));
   }
 
   @override
@@ -98,7 +99,7 @@ ApiException mapDio(Object e) {
   if (e is DioException && e.response?.statusCode == 403) {
     final d = e.response?.data;
     if (d is Map) {
-      final detail = d['detail'] is String ? d['detail'] as String : 'Accès refusé.';
+      final detail = d['detail'] is String ? d['detail'] as String : tr('Accès refusé.');
       if (d['code'] == 'course_access_required') {
         return CourseAccessRequired(detail,
             enrollmentStatus: d['enrollment_status'] as String?);

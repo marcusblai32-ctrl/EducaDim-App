@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import '../../core/i18n/text.dart';
 
 class FieldSpec {
   FieldSpec(this.key, this.label,
@@ -20,7 +21,7 @@ class FieldSpec {
 Future<Map<String, String>?> showFormSheet(
     BuildContext context, String title, List<FieldSpec> fields,
     {String submitLabel = 'Ajouter'}) {
-  return showModalBottomSheet<Map<String, String>>(
+  return showModalBottomSheet<Map<String, String>>(sheetAnimationStyle: AnimationStyle.noAnimation, 
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
@@ -69,7 +70,7 @@ class _FormSheetState extends State<_FormSheet> {
                   child: f.options != null
                       ? DropdownButtonFormField<String>(
                           initialValue: _ctrl[f.key]!.text,
-                          decoration: InputDecoration(labelText: f.label),
+                          decoration: InputDecoration(labelText: tr(f.label)),
                           items: [
                             for (final o in f.options!.entries)
                               DropdownMenuItem(value: o.key, child: Text(o.value)),
@@ -81,7 +82,7 @@ class _FormSheetState extends State<_FormSheet> {
                           minLines: f.multiline ? 3 : 1,
                           maxLines: f.multiline ? 8 : 1,
                           keyboardType: f.number ? TextInputType.number : null,
-                          decoration: InputDecoration(labelText: f.label, hintText: f.hint),
+                          decoration: InputDecoration(labelText: tr(f.label), hintText: f.hint == null ? null : tr(f.hint!)),
                           validator: (v) =>
                               f.required && (v == null || v.trim().isEmpty) ? 'Champ requis' : null,
                         ),

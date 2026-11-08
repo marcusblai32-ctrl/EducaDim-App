@@ -1,10 +1,11 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/config/api_config.dart';
+import '../../core/i18n/text.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/theme/colors.dart';
-import '../../core/widgets/common.dart';
+import '../../core/widgets/language_button.dart';
 import 'auth_controller.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -17,10 +18,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _form = GlobalKey<FormState>();
   final _id = TextEditingController();
   final _pw = TextEditingController();
-  bool _busy = false, _hide = true;
+  bool _busy = false, _hide = true, _slow = false;
   String? _error;
-  String? _diag;
-  bool _slow = false;
 
   @override
   void dispose() {
@@ -31,6 +30,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _submit() async {
     if (!_form.currentState!.validate()) return;
+    FocusScope.of(context).unfocus();
     setState(() {
       _busy = true;
       _error = null;
@@ -49,113 +49,132 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<void> _diagnose() async {
-    setState(() => _diag = 'Test en cours… (jusqu’à 1 minute)');
-    final r = await context.read<AuthController>().diagnose();
-    if (mounted) setState(() => _diag = r);
-  }
-
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context);
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480),
-              child: Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(26),
-                  child: Form(
-                    key: _form,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Center(
-                          child: Image.asset('assets/logo.png',
-                              height: 96, semanticLabel: 'Logo EducaDim'),
-                        ),
-                        const SizedBox(height: 14),
-                        const PageHeader('Bon retour', 'Connectez-vous',
-                            subtitle:
-                                'Accédez à vos formations et reprenez votre apprentissage.'),
-                        TextFormField(
-                          controller: _id,
-                          keyboardType: TextInputType.emailAddress,
-                          autofillHints: const [AutofillHints.username],
-                          decoration:
-                              const InputDecoration(labelText: 'E-mail ou identifiant (user_id)'),
-                          validator: (v) =>
-                              (v == null || v.trim().isEmpty) ? 'Champ requis' : null,
-                        ),
-                        const SizedBox(height: 14),
-                        TextFormField(
-                          controller: _pw,
-                          obscureText: _hide,
-                          autofillHints: const [AutofillHints.password],
-                          decoration: InputDecoration(
-                            labelText: 'Mot de passe',
-                            suffixIcon: IconButton(
-                              tooltip: _hide ? 'Afficher' : 'Masquer',
-                              icon: Icon(_hide
-                                  ? Icons.visibility_outlined
-                                  : Icons.visibility_off_outlined),
-                              onPressed: () => setState(() => _hide = !_hide),
-                            ),
-                          ),
-                          validator: (v) =>
-                              (v == null || v.isEmpty) ? 'Champ requis' : null,
-                          onFieldSubmitted: (_) => _submit(),
-                        ),
-                        if (_error != null) ...[
-                          const SizedBox(height: 12),
-                          Text(_error!,
-                              style: const TextStyle(
-                                  color: EdColors.red, fontWeight: FontWeight.w700)),
-                        ],
-                        if (_busy && _slow) ...[
-                          const SizedBox(height: 12),
-                          const Text(
-                              'Le serveur se réveille, cela peut prendre jusqu’à 1 minute…'),
-                        ],
-                        const SizedBox(height: 18),
-                        FilledButton(
-                          onPressed: _busy ? null : _submit,
-                          child: _busy
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                      strokeWidth: 2, color: Colors.white))
-                              : const Text('Se connecter'),
-                        ),
-                        const SizedBox(height: 10),
-                        TextButton(
-                          onPressed: () => launchUrl(
-                            Uri.parse(ApiConfig.signupWebUrl),
-                            mode: LaunchMode.externalApplication,
-                          ),
-                          child: const Text('Créer un compte (site EducaDim)'),
-                        ),
-                        TextButton(
-                          onPressed: _diagnose,
-                          child: const Text('Tester la connexion au serveur'),
-                        ),
-                        if (_diag != null)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 6),
-                            child: Text(_diag!, style: const TextStyle(height: 1.4)),
-                          ),
+      body: SingleChildScrollView(
+        child: Column(children: [
+          // ---- En-tête de marque ----
+          Container(
+            width: double.infinity,
+            decoration: const BoxDecoration(
+              gradient: EdColors.hero,
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(36)),
+            ),
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+                child: Column(children: [
+                  const Align(alignment: Alignment.centerRight, child: LanguageButton(onDark: true)),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.18),
+                            blurRadius: 24,
+                            offset: const Offset(0, 10)),
                       ],
                     ),
+                    child: Image.asset('assets/logo.png', height: 72),
                   ),
-                ),
+                  const SizedBox(height: 22),
+                  const Text('Bon retour !',
+                      style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 6),
+                  const Text('Connectez-vous pour reprendre votre apprentissage.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Color(0xFFDDE2FF), height: 1.4)),
+                ]),
               ),
             ),
           ),
-        ),
+          // ---- Formulaire ----
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: Form(
+                key: _form,
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  TextFormField(
+                    controller: _id,
+                    keyboardType: TextInputType.emailAddress,
+                    autofillHints: const [AutofillHints.username],
+                    textInputAction: TextInputAction.next,
+                    decoration: InputDecoration(
+                      labelText: tr('E-mail ou identifiant'),
+                      prefixIcon: const Icon(Icons.person_outline_rounded),
+                    ),
+                    validator: (v) => (v == null || v.trim().isEmpty) ? tr('Champ requis') : null,
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: _pw,
+                    obscureText: _hide,
+                    autofillHints: const [AutofillHints.password],
+                    decoration: InputDecoration(
+                      labelText: tr('Mot de passe'),
+                      prefixIcon: const Icon(Icons.lock_outline_rounded),
+                      suffixIcon: IconButton(
+                        tooltip: _hide ? tr('Afficher') : tr('Masquer'),
+                        icon: Icon(_hide ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                        onPressed: () => setState(() => _hide = !_hide),
+                      ),
+                    ),
+                    validator: (v) => (v == null || v.isEmpty) ? tr('Champ requis') : null,
+                    onFieldSubmitted: (_) => _submit(),
+                  ),
+                  if (_error != null) ...[
+                    const SizedBox(height: 14),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: EdColors.red.withValues(alpha: 0.09),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        const Icon(Icons.error_outline_rounded, color: EdColors.red, size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                            child: Text(_error!,
+                                style: const TextStyle(color: EdColors.red, fontWeight: FontWeight.w600))),
+                      ]),
+                    ),
+                  ],
+                  if (_busy && _slow) ...[
+                    const SizedBox(height: 12),
+                    Text('Connexion en cours… cela peut prendre un moment.',
+                        style: t.textTheme.bodySmall),
+                  ],
+                  const SizedBox(height: 22),
+                  FilledButton(
+                    onPressed: _busy ? null : _submit,
+                    child: _busy
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white))
+                        : const Text('Se connecter'),
+                  ),
+                  const SizedBox(height: 12),
+                  Center(
+                    child: TextButton(
+                      onPressed: () => launchUrl(Uri.parse(ApiConfig.signupWebUrl),
+                          mode: LaunchMode.externalApplication),
+                      child: const Text('Créer un compte'),
+                    ),
+                  ),
+                ]),
+              ),
+            ),
+          ),
+        ]),
       ),
     );
   }

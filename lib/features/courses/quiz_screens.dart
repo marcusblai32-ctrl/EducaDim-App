@@ -1,5 +1,6 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import '../../core/i18n/text.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -32,8 +33,7 @@ class QuizListScreen extends StatelessWidget {
             return await repo.quizzes(courseId);
           } on ApiException catch (e) {
             if (e.statusCode == 404) {
-              throw ApiException('Les quiz ne sont pas encore disponibles sur le serveur '
-                  '(mise à jour du backend nécessaire).');
+              throw ApiException(tr('Cette fonctionnalité n’est pas disponible pour le moment.'));
             }
             rethrow;
           }
@@ -56,13 +56,15 @@ class QuizListScreen extends StatelessWidget {
                   child: Card(
                     child: ListTile(
                       leading: Icon(q.passed ? Icons.check_circle : Icons.quiz_outlined,
-                          color: q.passed ? EdColors.good : EdColors.blue),
+                          color: q.passed ? EdColors.good : null),
                       title: Text(q.titre),
                       subtitle: Text(
                         q.compatible
-                            ? '${q.questions} question(s) · ${q.duree} min · réussite ${q.passPct} %'
-                                '${q.bestScore != null ? ' · meilleur : ${q.bestScore!.toStringAsFixed(0)} %' : ''}'
-                            : 'Contient des questions audio/vidéo/fichier : à passer sur le site.',
+                            ? tr('{n} question(s) · {d} min · réussite {p} %', {'n': q.questions, 'd': q.duree, 'p': q.passPct}) +
+                                (q.bestScore != null
+                                    ? tr(' · meilleur : {s} %', {'s': q.bestScore!.toStringAsFixed(0)})
+                                    : '')
+                            : tr('Contient des questions audio/vidéo/fichier : à passer sur le site.'),
                       ),
                       trailing: q.compatible
                           ? const Icon(Icons.chevron_right)
@@ -101,7 +103,7 @@ class _QuizIntroScreenState extends State<QuizIntroScreen> {
       final attempt = await context.read<CourseRepository>().startQuiz(quiz.id);
       if (mounted) context.pushReplacement('/quiz/${quiz.id}/take', extra: QuizRun(quiz, attempt));
     } on ApiException catch (e) {
-      msg.showSnackBar(SnackBar(
+      msg.showSnackBar(snackBarAnimationStyle: AnimationStyle.noAnimation, SnackBar(
           content: Text(e.isOffline
               ? 'Connexion requise pour démarrer le quiz (une seule fois). Réessayez en ligne.'
               : e.message)));
@@ -123,14 +125,14 @@ class _QuizIntroScreenState extends State<QuizIntroScreen> {
           return ListView(padding: const EdgeInsets.all(16), children: [
             HeroCard(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Eyebrow('Évaluation', color: Color(0xFF83DCE5)),
+                const Eyebrow('Évaluation', color: Color(0xFFB9C2FF)),
                 const SizedBox(height: 8),
                 Text(q.titre,
                     style: const TextStyle(
                         color: Colors.white, fontSize: 24, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 8),
-                Text('${q.questions.length} question(s) · ${q.duree} min · réussite à ${q.passPct} %',
-                    style: const TextStyle(color: Color(0xFFD3E2E9))),
+                Text(tr('{n} question(s) · {d} min · réussite à {p} %', {'n': q.questions.length, 'd': q.duree, 'p': q.passPct}),
+                    style: const TextStyle(color: Color(0xFFDDE2FF))),
               ]),
             ),
             if (q.description.isNotEmpty) ...[
@@ -231,13 +233,13 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
 
   Future<void> _confirmAndSubmit() async {
     final missing = _qs.where((q) => !_a(q).answered).length;
-    final ok = await showDialog<bool>(
+    final ok = await showDialog<bool>(animationStyle: AnimationStyle.noAnimation, 
       context: context,
       builder: (c) => AlertDialog(
         title: const Text('Terminer le quiz ?'),
         content: Text(missing == 0
-            ? 'Vos réponses vont être envoyées.'
-            : '$missing question(s) sans réponse. Terminer quand même ?'),
+            ? tr('Vos réponses vont être envoyées.')
+            : tr('{n} question(s) sans réponse. Terminer quand même ?', {'n': missing})),
         actions: [
           TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Continuer')),
           FilledButton(
@@ -280,7 +282,7 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
         );
         await sync.refreshCount();
       } else {
-        msg.showSnackBar(SnackBar(content: Text(e.message)));
+        msg.showSnackBar(snackBarAnimationStyle: AnimationStyle.noAnimation, SnackBar(content: Text(e.message)));
         if (mounted) setState(() => _busy = false);
         return;
       }
@@ -306,7 +308,7 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
       canPop: false,
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop) return;
-        final leave = await showDialog<bool>(
+        final leave = await showDialog<bool>(animationStyle: AnimationStyle.noAnimation, 
           context: context,
           builder: (c) => AlertDialog(
             title: const Text('Quitter le quiz ?'),
@@ -322,7 +324,7 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Text('Question ${_i + 1} / ${_qs.length}'),
+          title: Text(tr('Question {i} / {n}', {'i': _i + 1, 'n': _qs.length})),
           actions: [
             Center(
               child: Padding(
@@ -499,8 +501,8 @@ class QuizResultScreen extends StatelessWidget {
                 Text('${(r.score ?? 0).toStringAsFixed(0)} %',
                     style: const TextStyle(
                         color: Colors.white, fontSize: 40, fontWeight: FontWeight.w800)),
-                Text(ok ? 'Réussi' : 'Non réussi · minimum ${r.passPct} %',
-                    style: const TextStyle(color: Color(0xFFD3E2E9), fontWeight: FontWeight.w700)),
+                Text(ok ? tr('Réussi') : tr('Non réussi · minimum {p} %', {'p': r.passPct}),
+                    style: const TextStyle(color: Color(0xFFDDE2FF), fontWeight: FontWeight.w700)),
               ]),
             ),
             const SizedBox(height: 16),

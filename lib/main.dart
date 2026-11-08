@@ -1,10 +1,9 @@
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import 'app.dart';
 import 'core/db/app_database.dart';
+import 'core/i18n/lang.dart';
 import 'core/db/cache_store.dart';
 import 'core/db/outbox_repository.dart';
 import 'core/db/user_data_guard.dart';
@@ -22,163 +21,102 @@ import 'features/courses/offline_course_service.dart';
 import 'features/courses/progress_service.dart';
 import 'features/downloads/download_service.dart';
 import 'features/notifications/notification_service.dart';
+import 'features/review/review_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
   final prefs = await SharedPreferences.getInstance();
+  await Lang.instance.init(prefs);
   final db = await AppDatabase.open();
   final cache = CacheStore(db);
   final tokens = TokenStore();
 
   final auth = AuthController(tokens, cache);
-
-  final api = ApiClient(
-    tokens,
-    onSessionExpired: auth.expire,
-  );
-
+  final api = ApiClient(tokens, onSessionExpired: auth.expire);
   auth.api = api;
 
-  final outbox = OutboxRepository(db)
-    ..ownerProvider = () => auth.identity;
-
-  final sync = SyncService(
-    outbox,
-    ApiSyncGateway(api, cache),
-  )..currentOwner = () => auth.identity;
+  final outbox = OutboxRepository(db)..ownerProvider = () => auth.identity;
+  final sync = SyncService(outbox, ApiSyncGateway(api, cache))..currentOwner = () => auth.identity;
 
   final repo = CourseRepository(api, cache);
-
-  final chat = ChatController(
-    api,
-    db,
-    cache,
-    outbox,
-    sync,
-  );
-
+  final chat = ChatController(api, db, cache, outbox, sync);
   final downloads = DownloadService(db)..load();
-
-  final progress = ProgressService(
-    db,
-    outbox,
-    sync,
-    api,
-  );
-
-  final offline = OfflineCourseService(
-    db,
-    repo,
-    cache,
-  );
-
-  final notifications = NotificationService(
-    api,
-    cache,
-    outbox,
-    sync,
-  );
-
+  final progress = ProgressService(db, outbox, sync, api);
+  final offline = OfflineCourseService(db, repo, cache);
+  final notifications = NotificationService(api, cache, outbox, sync);
   final adminAccess = AdminAccess(api, cache);
+  final review = ReviewService(api);
   final guard = UserDataGuard(db, prefs);
 
   sync.onItemRejected = (item) {
     final lesson = item.payload['lesson_id'];
-
-    if (lesson is int) {
-      progress.handleRejected(lesson);
-    }
-
-    if (item.kind == 'chat_message') {
-      chat.handleRejected(item.id);
-    }
+    if (lesson is int) progress.handleRejected(lesson);
+    if (item.kind == 'chat_message') chat.handleRejected(item.id);
   };
 
-  bool loggedIn() {
-    return auth.status == AuthStatus.authenticated;
-  }
+  bool loggedIn() => auth.status == AuthStatus.authenticated;
 
   sync.afterFlush = () async {
     if (!loggedIn()) return;
-
     await progress.pull();
     await notifications.refresh(silent: true);
   };
 
-  // Téléphones partagés :
-  // les données locales d'un compte ne doivent pas être
-  // accessibles au compte suivant.
+  // Téléphones partagés : un autre compte ne voit jamais les données locales du précédent.
   auth.onLoggedIn = (identity) async {
     final wiped = await guard.onLogin(identity);
-
     if (wiped) {
-      notifications.reset();
-      chat.reset();
-
       await progress.load();
       await offline.load();
+      notifications.reset();
+      chat.reset();
     }
   };
 
-  // Initialisation de la session.
+  // Session déjà ouverte au lancement (l'identité vient du profil en cache).
   await auth.init();
-
   final startId = auth.identity;
+  if (loggedIn() && startId != null) await auth.onLoggedIn?.call(startId);
 
-  if (loggedIn() && startId != null) {
-    await auth.onLoggedIn?.call(startId);
-  }
-
-  // Chargement des données locales.
   await progress.load();
   await offline.load();
   await notifications.loadCached();
-
-  // Actualisation périodique des notifications.
   notifications.startPolling(loggedIn);
 
-  // Surveillance des changements de session.
   auth.addListener(() {
     if (loggedIn()) {
       adminAccess.load();
+      review.load();
       sync.flush();
     } else {
       adminAccess.clear();
+      review.reset();
     }
   });
-
   if (loggedIn()) {
     adminAccess.load();
+    review.load();
   }
-
   await sync.start();
 
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(
-          create: (_) => ThemeController(prefs),
-        ),
-        ChangeNotifierProvider.value(value: auth),
-        ChangeNotifierProvider.value(value: sync),
-        ChangeNotifierProvider.value(value: chat),
-        ChangeNotifierProvider.value(value: downloads),
-        ChangeNotifierProvider.value(value: progress),
-        ChangeNotifierProvider.value(value: offline),
-        ChangeNotifierProvider.value(value: notifications),
-        ChangeNotifierProvider.value(value: adminAccess),
-        Provider<ApiClient>.value(value: api),
-        Provider<OutboxRepository>.value(value: outbox),
-        Provider<CourseRepository>.value(value: repo),
-        Provider<CertificateRepository>.value(
-          value: CertificateRepository(api, cache),
-        ),
-        Provider<AdminRepository>.value(
-          value: AdminRepository(api),
-        ),
-      ],
-      child: const EducaDimApp(),
-    ),
-  );
+  runApp(MultiProvider(
+    providers: [
+      ChangeNotifierProvider(create: (_) => ThemeController(prefs)),
+      ChangeNotifierProvider.value(value: auth),
+      ChangeNotifierProvider.value(value: sync),
+      ChangeNotifierProvider.value(value: chat),
+      ChangeNotifierProvider.value(value: downloads),
+      ChangeNotifierProvider.value(value: progress),
+      ChangeNotifierProvider.value(value: offline),
+      ChangeNotifierProvider.value(value: notifications),
+      ChangeNotifierProvider.value(value: adminAccess),
+      ChangeNotifierProvider.value(value: review),
+      Provider<ApiClient>.value(value: api),
+      Provider<OutboxRepository>.value(value: outbox),
+      Provider<CourseRepository>.value(value: repo),
+      Provider<CertificateRepository>.value(value: CertificateRepository(api, cache)),
+      Provider<AdminRepository>.value(value: AdminRepository(api)),
+    ],
+    child: const EducaDimApp(),
+  ));
 }

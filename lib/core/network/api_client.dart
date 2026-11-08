@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:dio/dio.dart';
 import '../config/api_config.dart';
+import '../i18n/lang.dart';
 import '../storage/token_store.dart';
 
 /// Client HTTP : ajoute le jeton, rafraîchit une seule fois en cas de 401
@@ -13,10 +14,11 @@ class ApiClient {
               baseUrl: ApiConfig.baseUrl,
               connectTimeout: ApiConfig.connectTimeout,
               receiveTimeout: ApiConfig.receiveTimeout,
-              headers: {'Accept': 'application/json', 'Accept-Language': 'fr'},
+              headers: {'Accept': 'application/json'},
             )) {
     this.dio.interceptors.add(InterceptorsWrapper(
       onRequest: (o, h) async {
+        o.headers['Accept-Language'] = Lang.instance.code; // contenu des cours dans la langue choisie
         if (o.extra['noAuth'] != true) {
           final t = await _tokens.access;
           if (t != null) o.headers['Authorization'] = 'Bearer $t';

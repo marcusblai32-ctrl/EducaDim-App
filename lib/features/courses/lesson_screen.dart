@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import '../../core/i18n/text.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -124,8 +125,8 @@ class _LessonBody extends StatelessWidget {
             : () async {
                 await progress.complete(l.id, l.courseId);
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text('Enregistré sur cet appareil. Envoi au serveur dès que possible.')));
+                  ScaffoldMessenger.of(context).showSnackBar(snackBarAnimationStyle: AnimationStyle.noAnimation, SnackBar(
+                      content: Text(tr('Progression enregistrée. Synchronisation automatique dès que possible.'))));
                 }
               },
       ),
@@ -182,13 +183,13 @@ class _ContentTile extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 5),
       child: ListTile(
-        leading: Icon(_icons[c.type] ?? Icons.insert_drive_file_outlined, color: EdColors.blue),
+        leading: Icon(_icons[c.type] ?? Icons.insert_drive_file_outlined),
         title: Text((c.titre ?? '').isNotEmpty ? c.titre! : (_labels[c.type] ?? 'Ressource')),
         subtitle: Text(_labels[c.type] ?? c.type),
         trailing: Row(mainAxisSize: MainAxisSize.min, children: [
           if (downloadable && url != null)
             IconButton(
-              tooltip: 'Télécharger',
+              tooltip: tr('Télécharger'),
               icon: const Icon(Icons.download_outlined),
               onPressed: () async {
                 final msg = ScaffoldMessenger.of(context);
@@ -196,15 +197,15 @@ class _ContentTile extends StatelessWidget {
                   await context
                       .read<DownloadService>()
                       .download('content-${c.id}', c.titre ?? _labels[c.type]!, url);
-                  msg.showSnackBar(const SnackBar(content: Text('Téléchargé pour le hors ligne.')));
+                  msg.showSnackBar(snackBarAnimationStyle: AnimationStyle.noAnimation, const SnackBar(content: Text('Téléchargé pour le hors ligne.')));
                 } catch (_) {
-                  msg.showSnackBar(
+                  msg.showSnackBar(snackBarAnimationStyle: AnimationStyle.noAnimation, 
                       const SnackBar(content: Text('Téléchargement impossible. Vérifiez votre connexion.')));
                 }
               },
             ),
           IconButton(
-            tooltip: 'Ouvrir',
+            tooltip: tr('Ouvrir'),
             icon: const Icon(Icons.open_in_new),
             onPressed: url == null
                 ? null

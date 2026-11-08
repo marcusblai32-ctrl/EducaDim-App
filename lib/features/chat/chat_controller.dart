@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import '../../core/i18n/lang.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/db/app_database.dart';
 import '../../core/db/cache_store.dart';
@@ -152,7 +153,7 @@ class ChatController extends ChangeNotifier {
       }
       if (rooms.isEmpty) {
         roomsError = ex.statusCode == 404
-            ? 'Le chat n’est pas encore disponible sur le serveur (mise à jour du backend nécessaire).'
+            ? tr('Cette fonctionnalité n’est pas disponible pour le moment.')
             : ex.message;
       }
     } finally {

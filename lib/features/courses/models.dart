@@ -1,3 +1,5 @@
+import '../../core/i18n/lang.dart';
+
 // Modèles alignés sur mobile_api/serializers.py du backend Django.
 
 String? _s(Map m, String k) => m[k] is String ? m[k] as String : null;
@@ -63,7 +65,7 @@ class Course {
   }
 
   String get prixLabel {
-    if (!estPayant) return 'Gratuit';
+    if (!estPayant) return tr('Gratuit');
     final n = double.tryParse(prix);
     return n == null ? prix : '${n.toStringAsFixed(n % 1 == 0 ? 0 : 2)} HTG';
   }
@@ -106,7 +108,8 @@ class LessonRef {
 }
 
 class ModuleOutline {
-  ModuleOutline(this.titre, this.lecons);
+  ModuleOutline(this.id, this.titre, this.lecons);
+  final int id;
   final String titre;
   final List<LessonRef> lecons;
 }
@@ -135,6 +138,7 @@ class Curriculum {
                 _s(_m(u), 'titre') ?? '',
                 _l(_m(u)['modules'])
                     .map((mo) => ModuleOutline(
+                          _i(_m(mo), 'id') ?? 0,
                           _s(_m(mo), 'titre') ?? '',
                           _l(_m(mo)['lecons'])
                               .map((le) => LessonRef(_i(_m(le), 'id') ?? 0,
@@ -233,46 +237,53 @@ class Flashcard {
   Flashcard(this.id, this.question, this.reponse);
   final int id;
   final String question, reponse;
-  static List<Flashcard> listFromJson(dynamic j) => _l(_m(j)['flashcards'])
-      .map((f) => Flashcard(_i(_m(f), 'id') ?? 0, _s(_m(f), 'question') ?? '',
-          _s(_m(f), 'reponse') ?? ''))
-      .toList();
-}
 
-class ProgressSummary {
-  ProgressSummary(this.lessonsDone, this.coursePct);
-  final int lessonsDone;
-  final Map<int, double> coursePct; // course_id -> pourcentage serveur
-  factory ProgressSummary.fromJson(dynamic j) {
-    final m = _m(j);
-    final pct = <int, double>{};
-    for (final c in _l(m['courses'])) {
-      final id = _i(_m(c), 'course_id');
-      final p = _m(c)['pourcentage'];
-      if (id != null && p is num) pct[id] = p.toDouble();
-    }
-    return ProgressSummary(_l(m['lessons']).length, pct);
+  /// Choisit le texte créole si la langue de l'app est le kreyòl et qu'il existe.
+  static String _pick(Map m, String fr, String ht) {
+    final h = m[ht] is String ? (m[ht] as String).trim() : '';
+    final f = m[fr] is String ? m[fr] as String : '';
+    return Lang.instance.isHt && h.isNotEmpty ? h : f;
   }
-}
 
-class ActivityItem {
-  ActivityItem(this.type, this.label, this.description, this.date);
-  final String type, label, description;
-  final DateTime? date;
-  static List<ActivityItem> listFromJson(dynamic j) => _l(_m(j)['results'])
-      .map((a) => ActivityItem(
-            _s(_m(a), 'type') ?? '',
-            _s(_m(a), 'label') ?? '',
-            _s(_m(a), 'description') ?? '',
-            DateTime.tryParse(_s(_m(a), 'date') ?? '')?.toLocal(),
-          ))
+  static List<Flashcard> fromList(dynamic list) => _l(list)
+      .map((f) => Flashcard(_i(_m(f), 'id') ?? 0, _pick(_m(f), 'question', 'question_ht'),
+          _pick(_m(f), 'reponse', 'reponse_ht')))
       .toList();
+
+  /// Réponse de `GET modules/<id>/flashcards/`.
+  static List<Flashcard> listFromJson(dynamic j) => fromList(_m(j)['flashcards']);
 }
 
-String formatDate(DateTime? d) {
-  if (d == null) return '';
-  String two(int n) => n.toString().padLeft(2, '0');
-  return '${two(d.day)}/${two(d.month)}/${d.year} ${two(d.hour)}:${two(d.minute)}';
+class ModuleFlashcardCount {
+  ModuleFlashcardCount(this.moduleId, this.titre, this.count);
+  final int moduleId, count;
+  final String titre;
+}
+
+/// Réponse de `GET courses/<id>/flashcards/` : anciennes flashcards « générales » du cours
+/// + nombre de flashcards par module.
+class CourseFlashcards {
+  CourseFlashcards(this.general, this.modules);
+  final List<Flashcard> general;
+  final List<ModuleFlashcardCount> modules;
+
+  int countFor(int moduleId) {
+    for (final m in modules) {
+      if (m.moduleId == moduleId) return m.count;
+    }
+    return 0;
+  }
+
+  factory CourseFlashcards.fromJson(dynamic j) {
+    final m = _m(j);
+    return CourseFlashcards(
+      Flashcard.fromList(m['general'] ?? m['flashcards']),
+      _l(m['modules'])
+          .map((x) => ModuleFlashcardCount(
+              _i(_m(x), 'module_id') ?? 0, _s(_m(x), 'titre') ?? '', _i(_m(x), 'count') ?? 0))
+          .toList(),
+    );
+  }
 }
 
 // ---------------- Quiz ----------------

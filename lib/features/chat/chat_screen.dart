@@ -1,5 +1,6 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import '../../core/i18n/text.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/sync/sync_service.dart';
@@ -68,8 +69,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 padding: const EdgeInsets.only(bottom: 10),
                 child: Card(
                   child: ListTile(
-                    leading: Icon(r.type == 'group' ? Icons.groups_outlined : Icons.person_outline,
-                        color: EdColors.blue),
+                    leading: Icon(r.type == 'group' ? Icons.groups_outlined : Icons.person_outline),
                     title: Text(r.titre, maxLines: 1, overflow: TextOverflow.ellipsis),
                     subtitle: Text(
                       r.lastText == null
@@ -124,8 +124,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   void _toBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scroll.hasClients) {
-        _scroll.animateTo(_scroll.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 180), curve: Curves.easeOut);
+        _scroll.jumpTo(_scroll.position.maxScrollExtent);
       }
     });
   }
@@ -159,15 +158,15 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         if (chat.roomOffline[widget.roomId] == true)
           Container(
             width: double.infinity,
-            color: const Color(0xFFFFF5E6),
+            color: EdColors.warn.withValues(alpha: 0.12),
             padding: const EdgeInsets.all(10),
             child: const Text('Hors ligne : les nouveaux messages arriveront au retour de la connexion.',
-                style: TextStyle(fontSize: 12, color: Color(0xFF875315))),
+                style: TextStyle(fontSize: 12, color: EdColors.warn)),
           ),
         if (chat.roomError[widget.roomId] != null)
           Container(
             width: double.infinity,
-            color: const Color(0xFFFFECEC),
+            color: EdColors.red.withValues(alpha: 0.10),
             padding: const EdgeInsets.all(10),
             child: Text(chat.roomError[widget.roomId]!,
                 style: const TextStyle(fontSize: 12, color: EdColors.red)),
@@ -240,13 +239,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                   buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
                   textInputAction: TextInputAction.send,
                   onSubmitted: (_) => _send(),
-                  decoration: const InputDecoration(hintText: 'Votre message…'),
+                  decoration: InputDecoration(hintText: tr('Votre message…')),
                 ),
               ),
               const SizedBox(width: 8),
               IconButton.filled(
                 style: IconButton.styleFrom(backgroundColor: EdColors.red),
-                tooltip: 'Envoyer',
+                tooltip: tr('Envoyer'),
                 onPressed: _send,
                 icon: const Icon(Icons.send_rounded),
               ),

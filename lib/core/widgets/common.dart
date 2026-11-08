@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import '../i18n/text.dart';
 import '../theme/colors.dart';
 
 class EmptyState extends StatelessWidget {
@@ -18,19 +19,26 @@ class EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = Theme.of(context);
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(28),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(32),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, size: 44, color: t.colorScheme.primary),
-          const SizedBox(height: 14),
+          Container(
+            width: 84,
+            height: 84,
+            decoration: BoxDecoration(
+              color: t.colorScheme.primary.withValues(alpha: 0.10),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 38, color: t.colorScheme.primary),
+          ),
+          const SizedBox(height: 20),
           Text(title, style: t.textTheme.titleMedium, textAlign: TextAlign.center),
           const SizedBox(height: 8),
           Text(message,
               textAlign: TextAlign.center,
               style: t.textTheme.bodyMedium?.copyWith(
-                  color: t.colorScheme.onSurface.withValues(alpha: 0.65),
-                  height: 1.5)),
-          if (action != null) ...[const SizedBox(height: 18), action!],
+                  color: t.colorScheme.onSurface.withValues(alpha: 0.65), height: 1.5)),
+          if (action != null) ...[const SizedBox(height: 22), action!],
         ]),
       ),
     );
@@ -43,10 +51,10 @@ class Eyebrow extends StatelessWidget {
   final Color? color;
   @override
   Widget build(BuildContext context) => Text(
-        text.toUpperCase(),
+        tr(text).toUpperCase(),
         style: TextStyle(
           fontSize: 11,
-          letterSpacing: 1.2,
+          letterSpacing: 1.3,
           fontWeight: FontWeight.w800,
           color: color ?? Theme.of(context).colorScheme.primary,
         ),
@@ -69,52 +77,90 @@ class PageHeader extends StatelessWidget {
         const SizedBox(height: 8),
         Text(subtitle!,
             style: t.textTheme.bodyMedium?.copyWith(
-                color: t.colorScheme.onSurface.withValues(alpha: 0.65),
-                height: 1.5)),
+                color: t.colorScheme.onSurface.withValues(alpha: 0.65), height: 1.5)),
       ],
       const SizedBox(height: 18),
     ]);
   }
 }
 
+/// Titre de section avec action facultative (« Voir tout »).
+class SectionTitle extends StatelessWidget {
+  const SectionTitle(this.title, {super.key, this.actionLabel, this.onAction});
+  final String title;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(top: 8, bottom: 10),
+        child: Row(children: [
+          Expanded(child: Text(title, style: Theme.of(context).textTheme.titleLarge)),
+          if (actionLabel != null)
+            TextButton(onPressed: onAction, child: Text(actionLabel!)),
+        ]),
+      );
+}
+
 class HeroCard extends StatelessWidget {
   const HeroCard({super.key, required this.child});
   final Widget child;
   @override
-  Widget build(BuildContext context) => Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(22),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(22),
-          gradient: const LinearGradient(
-            colors: [EdColors.navy, EdColors.navyLight],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+  Widget build(BuildContext context) => ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Container(
+          width: double.infinity,
+          decoration: const BoxDecoration(gradient: EdColors.hero),
+          child: Stack(children: [
+            Positioned(
+              right: -40,
+              top: -40,
+              child: Container(
+                width: 150,
+                height: 150,
+                decoration: BoxDecoration(
+                    shape: BoxShape.circle, color: Colors.white.withValues(alpha: 0.07)),
+              ),
+            ),
+            Positioned(
+              right: 30,
+              bottom: -50,
+              child: Container(
+                width: 110,
+                height: 110,
+                decoration: BoxDecoration(
+                    shape: BoxShape.circle, color: EdColors.red.withValues(alpha: 0.22)),
+              ),
+            ),
+            Padding(padding: const EdgeInsets.all(22), child: child),
+          ]),
         ),
-        child: child,
       );
 }
 
 class StatTile extends StatelessWidget {
-  const StatTile(this.label, this.value, {super.key, this.hint});
+  const StatTile(this.label, this.value, {super.key, this.hint, this.icon});
   final String label;
   final String value;
   final String? hint;
+  final IconData? icon;
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context);
     final muted = t.colorScheme.onSurface.withValues(alpha: 0.6);
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(14),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(label.toUpperCase(),
-              style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: muted)),
-          const SizedBox(height: 6),
+          if (icon != null) ...[
+            Icon(icon, size: 20, color: t.colorScheme.primary),
+            const SizedBox(height: 8),
+          ],
           Text(value, style: t.textTheme.headlineMedium),
-          if (hint != null)
-            Text(hint!, style: TextStyle(fontSize: 11, color: muted)),
+          const SizedBox(height: 2),
+          Text(label,
+              maxLines: 2,
+              style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: muted)),
+          if (hint != null) Text(hint!, style: TextStyle(fontSize: 10.5, color: muted)),
         ]),
       ),
     );
@@ -128,24 +174,45 @@ class SyncBadge extends StatelessWidget {
   final int pending;
   @override
   Widget build(BuildContext context) {
-    final color = !online
-        ? EdColors.red
-        : pending > 0
-            ? const Color(0xFFB7791F)
-            : EdColors.good;
+    final color = !online ? EdColors.red : pending > 0 ? EdColors.warn : EdColors.good;
     final text = !online
-        ? 'Hors ligne'
+        ? tr('Hors ligne')
         : pending > 0
-            ? '$pending en attente'
-            : 'À jour';
+            ? tr('{n} en attente', {'n': pending})
+            : tr('À jour');
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(30),
       ),
-      child: Text(text,
-          style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w800)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Container(width: 7, height: 7, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+        const SizedBox(width: 6),
+        Text(text, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w800)),
+      ]),
+    );
+  }
+}
+
+/// Avatar rond avec initiales.
+class InitialsAvatar extends StatelessWidget {
+  const InitialsAvatar(this.name, {super.key, this.size = 56});
+  final String name;
+  final double size;
+  @override
+  Widget build(BuildContext context) {
+    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    final initials = parts.isEmpty
+        ? '?'
+        : (parts.first[0] + (parts.length > 1 ? parts.last[0] : '')).toUpperCase();
+    return Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: const BoxDecoration(gradient: EdColors.hero, shape: BoxShape.circle),
+      child: Text(initials,
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: size * 0.36)),
     );
   }
 }

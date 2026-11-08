@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import '../../core/i18n/text.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/widgets/async_view.dart';
@@ -21,7 +22,7 @@ class MyCoursesScreen extends StatelessWidget {
           final courses = r.value;
           return RefreshIndicator(
             onRefresh: reload,
-            child: ListView(padding: const EdgeInsets.all(16), children: [
+            child: ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 100), children: [
               const PageHeader('Votre apprentissage', 'Mes formations',
                   subtitle: 'Cours gratuits, inscriptions actives et abonnements.'),
               if (r.fromCache) const OfflineBanner(),

@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import '../../core/i18n/text.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/network/api_exception.dart';
@@ -34,8 +35,7 @@ class ProgressScreen extends StatelessWidget {
       cache = cache || p.fromCache;
     } on ApiException catch (e) {
       note = e.statusCode == 404
-          ? 'Le suivi serveur n’est pas encore disponible (mise à jour du backend nécessaire). '
-              'Affichage de la progression locale.'
+          ? tr('Suivi indisponible pour le moment : affichage de la progression enregistrée sur cet appareil.')
           : e.message;
     }
     try {
@@ -68,14 +68,14 @@ class ProgressScreen extends StatelessWidget {
               if (d.fromCache) const OfflineBanner(),
               HeroCard(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Eyebrow('Votre apprentissage', color: Color(0xFF83DCE5)),
+                  const Eyebrow('Votre apprentissage', color: Color(0xFFB9C2FF)),
                   const SizedBox(height: 8),
-                  Text('$done leçon(s) terminée(s)',
+                  Text(tr('{n} leçon(s) terminée(s)', {'n': done}),
                       style: const TextStyle(
                           color: Colors.white, fontSize: 24, fontWeight: FontWeight.w800)),
                   const SizedBox(height: 6),
-                  Text('${started.length} cours en cours · ${d.courses.length} accessible(s)',
-                      style: const TextStyle(color: Color(0xFFD3E2E9))),
+                  Text(tr('{a} cours en cours · {b} accessible(s)', {'a': started.length, 'b': d.courses.length}),
+                      style: const TextStyle(color: Color(0xFFDDE2FF))),
                 ]),
               ),
               if (d.note != null) ...[
@@ -113,10 +113,12 @@ class ProgressScreen extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 6),
-                            Text('${d.progress!.coursePct[c.id]!.toStringAsFixed(0)} %'
-                                ' · ${local.doneInCourse(c.id)} leçon(s) sur cet appareil'),
+                            Text(tr('{p} % · {n} leçon(s) sur cet appareil', {
+                              'p': d.progress!.coursePct[c.id]!.toStringAsFixed(0),
+                              'n': local.doneInCourse(c.id)
+                            })),
                           ] else
-                            Text('${local.doneInCourse(c.id)} leçon(s) terminée(s) sur cet appareil'),
+                            Text(tr('{n} leçon(s) terminée(s) sur cet appareil', {'n': local.doneInCourse(c.id)})),
                         ]),
                       ),
                     ),
@@ -132,7 +134,7 @@ class ProgressScreen extends StatelessWidget {
                   ListTile(
                     contentPadding: EdgeInsets.zero,
                     dense: true,
-                    leading: const Icon(Icons.history, color: EdColors.blue),
+                    leading: const Icon(Icons.history),
                     title: Text(a.description.isEmpty ? a.label : a.description),
                     subtitle: Text('${a.label} · ${formatDate(a.date)}'),
                   ),
