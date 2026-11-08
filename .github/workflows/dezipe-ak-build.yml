@@ -60,9 +60,7 @@ jobs:
           cache: true
       - name: Prepare android (INTERNET + icon)
         run: bash tool/ci_prepare.sh
-      - run: flutter analyze || true
-      - run: flutter test || true
-      - run: flutter build apk --release --dart-define=API_BASE_URL=https://educadim.onrender.com/api/v1/
+      - run: flutter build apk --release
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: apk-${{ github.run_number }}
