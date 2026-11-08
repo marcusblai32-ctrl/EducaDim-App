@@ -152,7 +152,7 @@ const Map<String, String> htStrings = {
   'Masquer': 'Kache',
   'Merci pour votre avis !': 'Mèsi pou opinyon ou !',
   'Mes certificats': 'Sètifika mwen yo',
-  'Mes cours': 'Kou mwen yo',
+  'Mes cours': 'Kou m yo',
   'Mes formations': 'Fòmasyon mwen yo',
   'Mes téléchargements': 'Telechajman mwen yo',
   'Modifications enregistrées.': 'Modifikasyon yo anrejistre.',

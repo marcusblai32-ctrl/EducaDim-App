@@ -156,7 +156,6 @@ class AppTheme {
         backgroundColor: secondary,
         foregroundColor: Colors.white,
         elevation: 3,
-        shape: const CircleBorder(),
       ),
       progressIndicatorTheme: ProgressIndicatorThemeData(color: primary, linearTrackColor: line),
       dividerColor: line,

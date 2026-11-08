@@ -66,6 +66,8 @@ class AppShell extends StatelessWidget {
       ),
       body: child,
       floatingActionButton: FloatingActionButton(
+        heroTag: null,
+        shape: const CircleBorder(),
         tooltip: tr('Discussions'),
         onPressed: () => context.push('/chat'),
         child: const Icon(Icons.chat_bubble_rounded),

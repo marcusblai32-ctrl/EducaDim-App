@@ -51,6 +51,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Administration')),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: null,
         icon: const Icon(Icons.add_rounded),
         label: const Text('Nouveau cours'),
         onPressed: () async {
