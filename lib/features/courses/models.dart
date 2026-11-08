@@ -286,6 +286,42 @@ class CourseFlashcards {
   }
 }
 
+class ProgressSummary {
+  ProgressSummary(this.lessonsDone, this.coursePct);
+  final int lessonsDone;
+  final Map<int, double> coursePct; // course_id -> pourcentage
+  factory ProgressSummary.fromJson(dynamic j) {
+    final m = _m(j);
+    final pct = <int, double>{};
+    for (final c in _l(m['courses'])) {
+      final id = _i(_m(c), 'course_id');
+      final p = _m(c)['pourcentage'];
+      if (id != null && p is num) pct[id] = p.toDouble();
+    }
+    return ProgressSummary(_l(m['lessons']).length, pct);
+  }
+}
+
+class ActivityItem {
+  ActivityItem(this.type, this.label, this.description, this.date);
+  final String type, label, description;
+  final DateTime? date;
+  static List<ActivityItem> listFromJson(dynamic j) => _l(_m(j)['results'])
+      .map((a) => ActivityItem(
+            _s(_m(a), 'type') ?? '',
+            _s(_m(a), 'label') ?? '',
+            _s(_m(a), 'description') ?? '',
+            DateTime.tryParse(_s(_m(a), 'date') ?? '')?.toLocal(),
+          ))
+      .toList();
+}
+
+String formatDate(DateTime? d) {
+  if (d == null) return '';
+  String two(int n) => n.toString().padLeft(2, '0');
+  return '${two(d.day)}/${two(d.month)}/${d.year} ${two(d.hour)}:${two(d.minute)}';
+}
+
 // ---------------- Quiz ----------------
 
 class QuizSummary {

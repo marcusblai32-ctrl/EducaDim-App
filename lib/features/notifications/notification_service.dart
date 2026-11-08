@@ -140,6 +140,14 @@ class NotificationService extends ChangeNotifier {
     }
   }
 
+  /// Vide la liste (changement de compte).
+  void reset() {
+    items = [];
+    fromCache = false;
+    error = null;
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     _timer?.cancel();
