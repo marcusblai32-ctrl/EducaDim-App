@@ -69,7 +69,10 @@ class _ChatScreenState extends State<ChatScreen> {
                 padding: const EdgeInsets.only(bottom: 10),
                 child: Card(
                   child: ListTile(
-                    leading: Icon(r.type == 'group' ? Icons.groups_outlined : Icons.person_outline),
+                    leading: Stack(clipBehavior: Clip.none, children: [
+                      Icon(r.type == 'group' ? Icons.groups_outlined : Icons.person_outline),
+                      if (r.onlineCount > 0) const Positioned(right: -4, bottom: -4, child: OnlineDot(size: 12)),
+                    ]),
                     title: Text(r.titre, maxLines: 1, overflow: TextOverflow.ellipsis),
                     subtitle: Text(
                       r.lastText == null
@@ -103,18 +106,21 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   final _c = TextEditingController();
   final _scroll = ScrollController();
   Timer? _poll;
+  late ChatController _chat;
   int _lastCount = 0;
 
   @override
   void initState() {
     super.initState();
     final chat = context.read<ChatController>();
+    _chat = chat;
     chat.openRoom(widget.roomId);
     _poll = Timer.periodic(const Duration(seconds: 8), (_) => chat.fetch(widget.roomId));
   }
 
   @override
   void dispose() {
+    _chat.closeRoom(widget.roomId);
     _poll?.cancel();
     _c.dispose();
     _scroll.dispose();

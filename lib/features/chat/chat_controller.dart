@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../../core/i18n/lang.dart';
 import 'package:uuid/uuid.dart';
+import '../../core/alerts/alert_service.dart';
 import '../../core/db/app_database.dart';
 import '../../core/db/cache_store.dart';
 import '../../core/db/outbox_repository.dart';
@@ -12,12 +13,14 @@ import '../../core/sync/sync_service.dart';
 
 class ChatRoomSummary {
   ChatRoomSummary(this.id, this.titre, this.type, this.courseId, this.lastText,
-      this.lastUser, this.lastAt);
+      this.lastUser, this.lastAt, {this.lastMine = false, this.onlineCount = 0});
   final int id;
   final String titre, type;
   final int? courseId;
   final String? lastText, lastUser;
   final DateTime? lastAt;
+  final bool lastMine;
+  final int onlineCount; // autres participants en ligne (point vert)
 
   factory ChatRoomSummary.fromJson(dynamic j) {
     final m = j is Map ? j : const {};
@@ -30,6 +33,8 @@ class ChatRoomSummary {
       last?['contenu'] as String?,
       last?['user_name'] as String?,
       DateTime.tryParse((last?['created_at'] as String?) ?? '')?.toLocal(),
+      lastMine: last?['mine'] == true,
+      onlineCount: m['online_count'] is int ? m['online_count'] as int : 0,
     );
   }
 
@@ -38,11 +43,13 @@ class ChatRoomSummary {
         'titre': titre,
         'type': type,
         'course_id': courseId,
+        'online_count': onlineCount,
         'last_message': lastText == null
             ? null
             : {
                 'contenu': lastText,
                 'user_name': lastUser,
+                'mine': lastMine,
                 'created_at': lastAt?.toUtc().toIso8601String(),
               },
       };
@@ -116,6 +123,11 @@ class ChatController extends ChangeNotifier {
   final Map<int, bool> roomOffline = {};
   final Map<int, String?> roomError = {};
 
+  int? activeRoom;
+  Timer? _poll;
+  final Map<int, DateTime> _seenLast = {};
+  bool _roomsBaseline = false;
+
   int get totalPending => _local.values.fold(0, (a, l) => a + l.length);
 
   void reset() {
@@ -125,7 +137,35 @@ class ChatController extends ChangeNotifier {
     roomOffline.clear();
     roomError.clear();
     roomsError = null;
+    _seenLast.clear();
+    _roomsBaseline = false;
     notifyListeners();
+  }
+
+  void closeRoom(int id) {
+    if (activeRoom == id) activeRoom = null;
+  }
+
+  /// Vérifie les salons toutes les 45 s (application ouverte) : son pour un nouveau message.
+  void startPolling(bool Function() loggedIn) {
+    _poll?.cancel();
+    _poll = Timer.periodic(const Duration(seconds: 45), (_) {
+      if (loggedIn()) loadRooms(silent: true);
+    });
+  }
+
+  void _detectNew() {
+    for (final r in rooms) {
+      final at = r.lastAt;
+      if (at == null) continue;
+      final prev = _seenLast[r.id];
+      final isNew = prev == null || at.isAfter(prev);
+      if (_roomsBaseline && isNew && !r.lastMine && r.id != activeRoom) {
+        AlertService.instance.notify(tr('Nouveau message'), '${r.titre} — ${r.lastUser ?? ''}: ${r.lastText ?? ''}');
+      }
+      if (isNew) _seenLast[r.id] = at;
+    }
+    _roomsBaseline = true;
   }
 
   Future<void> loadRooms({bool silent = false}) async {
@@ -139,6 +179,7 @@ class ChatController extends ChangeNotifier {
       final raw = res.data is Map && res.data['rooms'] is List ? res.data['rooms'] as List : [];
       rooms = raw.map(ChatRoomSummary.fromJson).toList();
       roomsFromCache = false;
+      _detectNew();
       await _cache.put('chat:rooms', {'rooms': rooms.map((r) => r.toJson()).toList()});
     } on DioException catch (e) {
       final ex = mapDio(e);
@@ -179,6 +220,7 @@ class ChatController extends ChangeNotifier {
   }
 
   Future<void> openRoom(int roomId) async {
+    activeRoom = roomId;
     await _loadLocal(roomId);
     if (_server[roomId] == null) {
       final c = await _cache.get('chat:room:$roomId');
@@ -215,6 +257,11 @@ class ChatController extends ChangeNotifier {
           queryParameters: lastId == null ? null : {'after': lastId});
       final raw = res.data is Map && res.data['messages'] is List ? res.data['messages'] as List : [];
       final incoming = raw.map(ChatMessage.fromServer).toList();
+      final known = {for (final m in have) m.serverId};
+      final fresh = incoming.where((m) => !known.contains(m.serverId) && !m.mine).toList();
+      if (have.isNotEmpty && fresh.isNotEmpty) {
+        AlertService.instance.notify(tr('Nouveau message'), '${fresh.last.userName}: ${fresh.last.body}');
+      }
       final byId = {for (final m in have) m.serverId: m};
       for (final m in incoming) {
         byId[m.serverId] = m;

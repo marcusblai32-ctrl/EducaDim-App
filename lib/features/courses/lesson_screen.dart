@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/config/api_config.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/theme/colors.dart';
+import '../../core/widgets/controlled_video.dart';
 import '../../core/widgets/net_image.dart';
 import '../../core/widgets/common.dart';
 import '../downloads/download_service.dart';
@@ -177,6 +178,18 @@ class _ContentTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           child: NetImage(url, aspectRatio: null, fit: BoxFit.fitWidth),
         ),
+      );
+    }
+    if (c.type == 'video' && url != null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          if ((c.titre ?? '').isNotEmpty)
+            Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text(c.titre!, style: const TextStyle(fontWeight: FontWeight.w800))),
+          ControlledVideo(url: url, title: c.titre),
+        ]),
       );
     }
     final downloadable = c.type == 'pdf' || c.type == 'audio' || c.type == 'fichier';

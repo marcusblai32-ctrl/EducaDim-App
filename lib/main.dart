@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'app.dart';
+import 'core/alerts/alert_service.dart';
 import 'core/db/app_database.dart';
 import 'core/i18n/lang.dart';
 import 'core/db/cache_store.dart';
@@ -22,11 +23,13 @@ import 'features/courses/progress_service.dart';
 import 'features/downloads/download_service.dart';
 import 'features/notifications/notification_service.dart';
 import 'features/review/review_service.dart';
+import 'features/study/study_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
   await Lang.instance.init(prefs);
+  await AlertService.instance.init(prefs);
   final db = await AppDatabase.open();
   final cache = CacheStore(db);
   final tokens = TokenStore();
@@ -46,6 +49,7 @@ Future<void> main() async {
   final notifications = NotificationService(api, cache, outbox, sync);
   final adminAccess = AdminAccess(api, cache);
   final review = ReviewService(api);
+  final study = StudyService(api, prefs);
   final guard = UserDataGuard(db, prefs);
 
   sync.onItemRejected = (item) {
@@ -56,6 +60,7 @@ Future<void> main() async {
 
   bool loggedIn() => auth.status == AuthStatus.authenticated;
 
+  study.onAward = () => notifications.refresh(silent: true);
   sync.afterFlush = () async {
     if (!loggedIn()) return;
     await progress.pull();
@@ -87,15 +92,20 @@ Future<void> main() async {
     if (loggedIn()) {
       adminAccess.load();
       review.load();
+      study.ping();
       sync.flush();
     } else {
       adminAccess.clear();
       review.reset();
+      study.reset();
     }
   });
+  study.start(loggedIn);
+  chat.startPolling(loggedIn);
   if (loggedIn()) {
     adminAccess.load();
     review.load();
+    study.ping();
   }
   await sync.start();
 
@@ -111,6 +121,7 @@ Future<void> main() async {
       ChangeNotifierProvider.value(value: notifications),
       ChangeNotifierProvider.value(value: adminAccess),
       ChangeNotifierProvider.value(value: review),
+      ChangeNotifierProvider.value(value: study),
       Provider<ApiClient>.value(value: api),
       Provider<OutboxRepository>.value(value: outbox),
       Provider<CourseRepository>.value(value: repo),

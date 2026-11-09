@@ -9,6 +9,7 @@ import '../../core/db/outbox_repository.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/sync/sync_service.dart';
 import '../../core/theme/colors.dart';
+import '../../core/widgets/controlled_video.dart';
 import '../../core/widgets/net_image.dart';
 import '../../core/widgets/async_view.dart';
 import '../../core/widgets/common.dart';
@@ -356,11 +357,13 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
             Padding(
                 padding: const EdgeInsets.only(bottom: 10),
                 child: Text(q.mediaTexte!, style: const TextStyle(fontStyle: FontStyle.italic))),
-          for (final link in [q.audio, q.video].whereType<String>())
+          if (q.video != null)
+            Padding(padding: const EdgeInsets.only(bottom: 12), child: ControlledVideo(url: q.video!)),
+          if (q.audio != null)
             OutlinedButton.icon(
               icon: const Icon(Icons.open_in_new),
-              label: Text(link == q.audio ? 'Écouter l’audio' : 'Voir la vidéo'),
-              onPressed: () => launchUrl(Uri.parse(link), mode: LaunchMode.externalApplication),
+              label: const Text('Écouter l’audio'),
+              onPressed: () => launchUrl(Uri.parse(q.audio!), mode: LaunchMode.externalApplication),
             ),
           Text(q.texte, style: t.textTheme.titleMedium?.copyWith(height: 1.4)),
           const SizedBox(height: 14),

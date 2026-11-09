@@ -25,6 +25,9 @@ dependencies:
   uuid: ^4.4.0
   cached_network_image: ^3.4.1
   open_filex: ^4.5.0
+  flutter_local_notifications: ">=19.0.0 <20.0.0"
+  timezone: ^0.10.0
+  webview_flutter: ^4.10.0
 
 dev_dependencies:
   flutter_test:

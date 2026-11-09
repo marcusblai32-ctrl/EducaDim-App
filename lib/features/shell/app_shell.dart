@@ -46,9 +46,9 @@ class AppShell extends StatelessWidget {
           const BrandWordmark(),
         ]),
         actions: [
-          if (!sync.online || sync.pending > 0) ...[
-            SyncBadge(online: sync.online, pending: sync.pending),
-            const SizedBox(width: 6),
+          if (sync.online) ...[
+            SyncBadge(online: true, pending: sync.pending),
+            const SizedBox(width: 8),
           ],
           const LanguageButton(),
           IconButton(

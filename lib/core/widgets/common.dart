@@ -167,46 +167,45 @@ class StatTile extends StatelessWidget {
   }
 }
 
-/// Pastille d'état de synchronisation (en ligne / hors ligne / en attente).
+/// Point vert « en ligne » (rien n'est affiché quand on n'est pas connecté).
+class OnlineDot extends StatelessWidget {
+  const OnlineDot({super.key, this.size = 11});
+  final double size;
+  @override
+  Widget build(BuildContext context) => Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: EdColors.good,
+          shape: BoxShape.circle,
+          border: Border.all(color: Theme.of(context).colorScheme.surface, width: 2),
+        ),
+      );
+}
+
+/// Indicateur de connexion : un petit point vert quand l'appareil est connecté, rien sinon.
 class SyncBadge extends StatelessWidget {
   const SyncBadge({super.key, required this.online, required this.pending});
   final bool online;
   final int pending;
   @override
-  Widget build(BuildContext context) {
-    final color = !online ? EdColors.red : pending > 0 ? EdColors.warn : EdColors.good;
-    final text = !online
-        ? tr('Hors ligne')
-        : pending > 0
-            ? tr('{n} en attente', {'n': pending})
-            : tr('À jour');
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(30),
-      ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Container(width: 7, height: 7, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-        const SizedBox(width: 6),
-        Text(text, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w800)),
-      ]),
-    );
-  }
+  Widget build(BuildContext context) =>
+      online ? Tooltip(message: tr('En ligne'), child: const OnlineDot()) : const SizedBox.shrink();
 }
 
 /// Avatar rond avec initiales.
 class InitialsAvatar extends StatelessWidget {
-  const InitialsAvatar(this.name, {super.key, this.size = 56});
+  const InitialsAvatar(this.name, {super.key, this.size = 56, this.online = false});
   final String name;
   final double size;
+  final bool online;
   @override
   Widget build(BuildContext context) {
     final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
     final initials = parts.isEmpty
         ? '?'
         : (parts.first[0] + (parts.length > 1 ? parts.last[0] : '')).toUpperCase();
-    return Container(
+    final avatar = Container(
       width: size,
       height: size,
       alignment: Alignment.center,
@@ -214,5 +213,10 @@ class InitialsAvatar extends StatelessWidget {
       child: Text(initials,
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: size * 0.36)),
     );
+    if (!online) return avatar;
+    return Stack(clipBehavior: Clip.none, children: [
+      avatar,
+      Positioned(right: -1, bottom: -1, child: OnlineDot(size: size * 0.28)),
+    ]);
   }
 }

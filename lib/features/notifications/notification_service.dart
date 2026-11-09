@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../../core/i18n/lang.dart';
+import '../../core/alerts/alert_service.dart';
 import '../../core/db/cache_store.dart';
 import '../../core/db/outbox_repository.dart';
 import '../../core/network/api_client.dart';
@@ -68,6 +69,8 @@ class NotificationService extends ChangeNotifier {
   bool fromCache = false;
   String? error;
   Timer? _timer;
+  final Set<int> _seen = {};
+  bool _baseline = false;
 
   int get unread => items.where((n) => !n.lue).length;
 
@@ -109,6 +112,20 @@ class NotificationService extends ChangeNotifier {
       items = raw.map(AppNotification.fromJson).map((n) => pend.contains(n.id) ? n.read() : n).toList();
       fromCache = false;
       error = null;
+      // Son : nouvelles notifications non lues apparues depuis la dernière actualisation.
+      final fresh = items.where((n) => !n.lue && !_seen.contains(n.id)).toList();
+      if (_baseline && fresh.isNotEmpty) {
+        if (fresh.length == 1) {
+          AlertService.instance.notify(fresh.first.titre, fresh.first.message);
+        } else {
+          AlertService.instance.notify(tr('Nouvelles notifications'),
+              tr('{n} nouvelles notifications', {'n': fresh.length}));
+        }
+      }
+      for (final n in items) {
+        _seen.add(n.id);
+      }
+      _baseline = true;
       await _cache.put('notifications', {'items': items.map((n) => n.toJson()).toList()});
     } on DioException catch (e) {
       final ex = mapDio(e);
@@ -145,6 +162,8 @@ class NotificationService extends ChangeNotifier {
     items = [];
     fromCache = false;
     error = null;
+    _seen.clear();
+    _baseline = false;
     notifyListeners();
   }
 

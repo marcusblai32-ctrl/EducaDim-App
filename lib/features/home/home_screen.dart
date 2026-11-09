@@ -8,6 +8,7 @@ import '../../core/theme/colors.dart';
 import '../../core/widgets/common.dart';
 import '../auth/auth_controller.dart';
 import '../courses/course_repository.dart';
+import '../study/study_screens.dart' show StreakCard;
 import '../courses/course_widgets.dart';
 import '../courses/lesson_screen.dart' show kLastLessonKey;
 import '../courses/models.dart';
@@ -89,6 +90,9 @@ class _HomeScreenState extends State<HomeScreen> {
           },
         ),
         const SizedBox(height: 18),
+
+        const StreakCard(),
+        const SizedBox(height: 16),
 
         // ---- Accès rapides ----
         Row(children: [

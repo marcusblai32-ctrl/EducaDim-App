@@ -23,20 +23,28 @@ import 'features/home/home_screen.dart';
 import 'features/notifications/notifications_screen.dart';
 import 'features/profile/profile_screen.dart';
 import 'features/shell/app_shell.dart';
+import 'features/study/study_screens.dart';
+import 'features/study/study_service.dart';
 
-GoRouter buildRouter(AuthController auth) => GoRouter(
+GoRouter buildRouter(AuthController auth, StudyService study) => GoRouter(
       initialLocation: '/home',
-      refreshListenable: auth,
+      refreshListenable: Listenable.merge([auth, study]),
       redirect: (context, state) {
         if (auth.status == AuthStatus.unknown) return null;
         final loggedIn = auth.status == AuthStatus.authenticated;
-        final onLogin = state.uri.path == '/login';
-        if (!loggedIn && !onLogin) return '/login'; // routes privées protégées
-        if (loggedIn && onLogin) return '/home';
+        final path = state.uri.path;
+        if (!loggedIn && path != '/login') return '/login'; // routes privées protégées
+        if (loggedIn && path == '/login') return study.needsOnboarding ? '/onboarding' : '/home';
+        // Premier lancement : choix du rythme d'étude obligatoire
+        if (loggedIn && study.needsOnboarding && path != '/onboarding') return '/onboarding';
+        if (loggedIn && !study.needsOnboarding && path == '/onboarding') return '/home';
         return null;
       },
       routes: [
         GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
+        GoRoute(path: '/onboarding', builder: (_, __) => const PlanScreen(firstTime: true)),
+        GoRoute(path: '/study/plan', builder: (_, __) => const PlanScreen(firstTime: false)),
+        GoRoute(path: '/leaderboard', builder: (_, __) => const LeaderboardScreen()),
         ShellRoute(
           builder: (_, __, child) => AppShell(child: child),
           routes: [
@@ -117,7 +125,7 @@ class EducaDimApp extends StatefulWidget {
 }
 
 class _EducaDimAppState extends State<EducaDimApp> {
-  late final GoRouter _router = buildRouter(context.read<AuthController>());
+  late final GoRouter _router = buildRouter(context.read<AuthController>(), context.read<StudyService>());
 
   @override
   Widget build(BuildContext context) {

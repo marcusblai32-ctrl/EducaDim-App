@@ -10,6 +10,8 @@ import '../admin/admin_repository.dart';
 import '../auth/auth_controller.dart';
 import '../review/review_service.dart';
 import '../review/review_sheet.dart';
+import '../../core/alerts/alert_service.dart';
+import '../study/study_service.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -20,6 +22,7 @@ class ProfileScreen extends StatelessWidget {
     final sync = context.watch<SyncService>();
     final auth = context.watch<AuthController>();
     final review = context.watch<ReviewService>();
+    final study = context.watch<StudyService>();
     final isAdmin = context.watch<AdminAccess>().canManage;
     final t = Theme.of(context);
     final muted = t.colorScheme.onSurface.withValues(alpha: 0.6);
@@ -70,6 +73,9 @@ class ProfileScreen extends StatelessWidget {
       const SectionTitle('Mon apprentissage'),
       _Group([
         _Item(Icons.insights_rounded, 'Ma progression', () => context.push('/progress')),
+        _Item(Icons.local_fire_department_rounded, 'Mon rythme d’étude', () => context.push('/study/plan'),
+            subtitle: study.hasPlan ? tr('{n} jour(s) par semaine', {'n': study.weekdays.length}) : null),
+        _Item(Icons.leaderboard_rounded, 'Classement des séries', () => context.push('/leaderboard')),
         _Item(Icons.workspace_premium_rounded, 'Mes certificats', () => context.push('/certificates')),
         _Item(Icons.download_for_offline_rounded, 'Téléchargements', () => context.push('/downloads')),
         _Item(Icons.forum_rounded, 'Discussions', () => context.push('/chat')),
@@ -111,6 +117,8 @@ class ProfileScreen extends StatelessWidget {
                 onSelectionChanged: (s) => theme.setMode(s.first),
               ),
             ),
+            const SizedBox(height: 8),
+            const _SoundSwitch(),
           ]),
         ),
       ),
@@ -189,5 +197,25 @@ class _Group extends StatelessWidget {
             if (i < items.length - 1) const Divider(indent: 56),
           ],
         ]),
+      );
+}
+
+
+class _SoundSwitch extends StatefulWidget {
+  const _SoundSwitch();
+  @override
+  State<_SoundSwitch> createState() => _SoundSwitchState();
+}
+
+class _SoundSwitchState extends State<_SoundSwitch> {
+  @override
+  Widget build(BuildContext context) => SwitchListTile(
+        contentPadding: EdgeInsets.zero,
+        title: const Text('Sons des notifications et rappels', style: TextStyle(fontWeight: FontWeight.w700)),
+        value: AlertService.instance.soundEnabled,
+        onChanged: (v) async {
+          await AlertService.instance.setSound(v);
+          if (mounted) setState(() {});
+        },
       );
 }
