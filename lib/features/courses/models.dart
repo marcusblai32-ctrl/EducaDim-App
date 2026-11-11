@@ -16,7 +16,10 @@ class CourseAccess {
   final String? expiresAt;
   factory CourseAccess.fromJson(dynamic j) {
     final m = _m(j);
-    return CourseAccess(_b(m, 'has_access'), _s(m, 'source'),
+    final source = _s(m, 'source');
+    // Un cours gratuit n'ouvre l'accès qu'après inscription explicite (source « enrollment »),
+    // même si un ancien serveur renvoie encore « free ».
+    return CourseAccess(_b(m, 'has_access') && source != 'free', source,
         _s(m, 'enrollment_status'), _s(m, 'expires_at'));
   }
 }
