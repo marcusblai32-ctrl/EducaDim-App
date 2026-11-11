@@ -60,6 +60,25 @@ open(p,'w').write(s)
 PY
 fi
 
+# ---- Icône de notification (silhouette blanche du logo) + R8 désactivé (workmanager/plugins) ----
+if [ -d assets/android_res ]; then
+  cp -r assets/android_res/. android/app/src/main/res/
+fi
+[ -f android/app/src/main/res/drawable-mdpi/ic_stat_educadim.png ] || { echo "ERREUR: icône de notification absente"; exit 1; }
+if ! grep -q "isMinifyEnabled" "$G" ; then
+  python3 - "$G" <<'PY'
+import sys,re
+p=sys.argv[1]
+s=open(p).read()
+kts=p.endswith('.kts')
+line=('isMinifyEnabled = false\n            isShrinkResources = false' if kts
+      else 'minifyEnabled false\n            shrinkResources false')
+if re.search(r'release\s*\{',s):
+    s=re.sub(r'(release\s*\{)', r'\1\n            '+line, s, count=1)
+open(p,'w').write(s)
+PY
+fi
+
 flutter pub get
 dart run flutter_launcher_icons
 echo "Projet Android prêt (Internet, notifications, rappels, icône)."

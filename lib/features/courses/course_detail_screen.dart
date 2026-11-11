@@ -26,7 +26,13 @@ class CourseDetailScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Formation')),
       body: AsyncView<Loaded<CourseDetail>>(
-        load: () => repo.detail(courseId),
+        load: () async {
+          final r = await repo.detail(courseId);
+          if (!r.fromCache && !r.value.course.estPayant && r.value.course.access.source == 'free') {
+            repo.enrollFree(courseId);
+          }
+          return r;
+        },
         builder: (context, r, reload) => _Body(r.value, r.fromCache, reload),
       ),
     );

@@ -22,6 +22,14 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  /// Salutation selon l'heure locale de l'appareil.
+  String _greeting() {
+    final h = DateTime.now().hour;
+    if (h >= 5 && h < 12) return 'Bonjour,';
+    if (h >= 12 && h < 18) return 'Bon après-midi,';
+    return 'Bonsoir,';
+  }
+
   // Les requêtes sont lancées une seule fois (pas à chaque reconstruction) : économie de données.
   late final Future<Loaded<CoursePage>> _catalog = context.read<CourseRepository>().catalog();
   late final Future<SharedPreferences> _prefs = SharedPreferences.getInstance();
@@ -50,7 +58,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(width: 12),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Bonjour,', style: TextStyle(color: muted, fontWeight: FontWeight.w600)),
+              Text(_greeting(), style: TextStyle(color: muted, fontWeight: FontWeight.w600)),
               Text(auth.firstName.isEmpty ? tr('Apprenant') : auth.firstName,
                   maxLines: 1, overflow: TextOverflow.ellipsis, style: t.textTheme.headlineMedium),
             ]),

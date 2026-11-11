@@ -101,14 +101,8 @@ class _LessonBody extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 child: SelectableText(l.contenu, style: const TextStyle(height: 1.6)))),
       ],
-      for (final s in l.sections) ...[
-        const SizedBox(height: 18),
-        Eyebrow(s.type),
-        const SizedBox(height: 4),
-        Text(s.titre, style: t.textTheme.titleLarge),
-        const SizedBox(height: 8),
-        for (final c in s.contenus) _ContentTile(c),
-      ],
+      if (l.sections.isNotEmpty) const SizedBox(height: 16),
+      for (final s in l.sections) _SectionTile(s),
       if (l.sections.isEmpty && l.contenu.trim().isEmpty)
         const SizedBox(
             height: 220,
@@ -135,6 +129,53 @@ class _LessonBody extends StatelessWidget {
       OutlinedButton(
           onPressed: () => context.pop(), child: const Text('← Retour au programme')),
     ]);
+  }
+}
+
+/// Section dépliable sur place (sans animation) : un clic ouvre / referme les contenus.
+class _SectionTile extends StatefulWidget {
+  const _SectionTile(this.s);
+  final LessonSection s;
+  @override
+  State<_SectionTile> createState() => _SectionTileState();
+}
+
+class _SectionTileState extends State<_SectionTile> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    final s = widget.s;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => setState(() => _open = !_open),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(children: [
+              Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                if (s.type.isNotEmpty) Eyebrow(s.type),
+                Text(s.titre, style: t.textTheme.titleMedium),
+              ])),
+              Icon(_open ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down),
+            ]),
+          ),
+        ),
+        if (_open)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+            child: s.contenus.isEmpty
+                ? Text(tr('Aucun contenu dans cette section.'))
+                : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    for (final c in s.contenus) _ContentTile(c),
+                  ]),
+          ),
+      ]),
+    );
   }
 }
 

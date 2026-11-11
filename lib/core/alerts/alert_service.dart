@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart' show Color;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
@@ -56,10 +57,15 @@ class AlertService {
       android: AndroidNotificationDetails(
         id,
         name,
-        importance: Importance.high,
-        priority: Priority.high,
+        importance: Importance.max, // bulle qui s'affiche au-dessus du rideau (heads-up)
+        priority: Priority.max,
         playSound: soundEnabled,
         enableVibration: soundEnabled,
+        icon: 'ic_stat_educadim',
+        color: const Color(0xFF1E40AF),
+        category: AndroidNotificationCategory.message,
+        visibility: NotificationVisibility.public,
+        ticker: name,
       ),
     );
   }

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'app.dart';
+import 'dart:async';
 import 'core/alerts/alert_service.dart';
+import 'core/alerts/background.dart';
 import 'core/db/app_database.dart';
 import 'core/i18n/lang.dart';
 import 'core/db/cache_store.dart';
@@ -90,17 +92,27 @@ Future<void> main() async {
 
   auth.addListener(() {
     if (loggedIn()) {
+      BackgroundAlerts.start();
+      AlertService.instance.requestPermission();
       adminAccess.load();
       review.load();
       study.ping();
       sync.flush();
     } else {
+      BackgroundAlerts.stop();
       adminAccess.clear();
       review.reset();
       study.reset();
     }
   });
   study.start(loggedIn);
+  // Marque « application ouverte » pour que le worker d'arrière-plan n'alerte pas en double.
+  BackgroundAlerts.markForeground(prefs);
+  Timer.periodic(const Duration(seconds: 30), (_) => BackgroundAlerts.markForeground(prefs));
+  if (loggedIn()) {
+    BackgroundAlerts.start();
+    AlertService.instance.requestPermission();
+  }
   chat.startPolling(loggedIn);
   if (loggedIn()) {
     adminAccess.load();

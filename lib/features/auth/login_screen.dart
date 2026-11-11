@@ -18,13 +18,15 @@ class _LoginScreenState extends State<LoginScreen> {
   final _form = GlobalKey<FormState>();
   final _id = TextEditingController();
   final _pw = TextEditingController();
-  bool _busy = false, _hide = true, _slow = false;
+  final _code = TextEditingController();
+  bool _busy = false, _hide = true, _slow = false, _needCode = false;
   String? _error;
 
   @override
   void dispose() {
     _id.dispose();
     _pw.dispose();
+    _code.dispose();
     super.dispose();
   }
 
@@ -40,11 +42,35 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted && _busy) setState(() => _slow = true);
     });
     try {
-      await context.read<AuthController>().login(_id.text, _pw.text);
+      final auth = context.read<AuthController>();
+      if (_needCode) {
+        await auth.verify2fa(_code.text);
+      } else if (await auth.login(_id.text, _pw.text)) {
+        if (mounted) setState(() => _needCode = true);
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.message;
+          if (_needCode && context.read<AuthController>().pending2fa == null) _needCode = false;
+        });
+      }
+    } finally {
+      slow.ignore();
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _resend() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await context.read<AuthController>().resend2fa();
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } finally {
-      slow.ignore();
       if (mounted) setState(() => _busy = false);
     }
   }
@@ -102,6 +128,41 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Form(
                 key: _form,
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  if (_needCode) ...[
+                    Text(
+                        tr('Un code de vérification a été envoyé à {t}.',
+                            {'t': (context.read<AuthController>().pending2fa?['target'] ?? '').toString()}),
+                        style: t.textTheme.bodyMedium),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: _code,
+                      keyboardType: TextInputType.number,
+                      maxLength: 6,
+                      autofillHints: const [AutofillHints.oneTimeCode],
+                      decoration: InputDecoration(
+                        labelText: tr('Code de vérification'),
+                        prefixIcon: const Icon(Icons.shield_outlined),
+                      ),
+                      validator: (v) =>
+                          (v == null || v.trim().length != 6) ? tr('Entrez le code à 6 chiffres') : null,
+                      onFieldSubmitted: (_) => _submit(),
+                    ),
+                    Row(children: [
+                      TextButton(onPressed: _busy ? null : _resend, child: Text(tr('Renvoyer le code'))),
+                      TextButton(
+                          onPressed: _busy
+                              ? null
+                              : () {
+                                  context.read<AuthController>().cancel2fa();
+                                  setState(() {
+                                    _needCode = false;
+                                    _code.clear();
+                                    _error = null;
+                                  });
+                                },
+                          child: Text(tr('Retour'))),
+                    ]),
+                  ] else ...[
                   TextFormField(
                     controller: _id,
                     keyboardType: TextInputType.emailAddress,
@@ -130,6 +191,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     validator: (v) => (v == null || v.isEmpty) ? tr('Champ requis') : null,
                     onFieldSubmitted: (_) => _submit(),
                   ),
+                  ],
                   if (_error != null) ...[
                     const SizedBox(height: 14),
                     Container(
@@ -160,7 +222,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             width: 22,
                             height: 22,
                             child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white))
-                        : const Text('Se connecter'),
+                        : Text(_needCode ? tr('Vérifier') : tr('Se connecter')),
                   ),
                   const SizedBox(height: 12),
                   Center(

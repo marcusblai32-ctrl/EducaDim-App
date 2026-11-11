@@ -57,8 +57,56 @@ class AuthController extends ChangeNotifier {
     } catch (_) {}
   }
 
+  /// Défi de vérification en deux étapes en attente : {challenge_id, channel, target}.
+  Map<String, dynamic>? pending2fa;
+
+  ApiException _mapLoginError(Object e) {
+    if (e is DioException && e.response?.statusCode == 404) {
+      return ApiException(tr('Connexion impossible pour le moment. Réessayez plus tard.'),
+          statusCode: 404);
+    }
+    if (e is DioException && e.response == null && e.type == DioExceptionType.unknown) {
+      return ApiException(tr('Connexion impossible. Vérifiez votre Internet et réessayez.'),
+          isOffline: true);
+    }
+    if (e is DioException) {
+      final data = e.response?.data;
+      final detail = data is Map && data['detail'] is String ? data['detail'] as String : null;
+      if (e.response?.statusCode == 429 && data is Map && data['code'] == 'two_factor_wait') {
+        return ApiException(detail ?? tr('Patientez avant de redemander un code.'),
+            statusCode: 429);
+      }
+      if (e.response?.statusCode == 400 && detail != null) {
+        return ApiException(detail, statusCode: 400);
+      }
+      if (e.response?.statusCode == 503 && detail != null) {
+        return ApiException(detail, statusCode: 503);
+      }
+    }
+    return ApiException.from(e);
+  }
+
+  Future<void> _finishLogin(dynamic d) async {
+    final access = d is Map ? d[ApiContract.accessTokenKey] : null;
+    if (access is! String) {
+      throw ApiException(tr('Connexion impossible pour le moment. Réessayez plus tard.'));
+    }
+    final refresh = d[ApiContract.refreshTokenKey];
+    await _tokens.save(access: access, refresh: refresh is String ? refresh : null);
+    if (d['user'] is Map) {
+      user = Map<String, dynamic>.from(d['user'] as Map);
+      await _cache.put('me', user);
+    }
+    pending2fa = null;
+    final id = identity;
+    if (id != null) await onLoggedIn?.call(id);
+    _status = AuthStatus.authenticated;
+    notifyListeners();
+  }
+
+  /// Retourne true si un code de vérification est demandé (2FA), false si connecté.
   /// Lance ApiException (message traduit) en cas d'échec.
-  Future<void> login(String identifier, String password) async {
+  Future<bool> login(String identifier, String password) async {
     try {
       final res = await api.dio.post(
         ApiContract.loginPath,
@@ -69,33 +117,50 @@ class AuthController extends ChangeNotifier {
         options: Options(extra: {'noAuth': true}),
       );
       final d = res.data;
-      final access = d is Map ? d[ApiContract.accessTokenKey] : null;
-      if (access is! String) {
-        throw ApiException(tr('Connexion impossible pour le moment. Réessayez plus tard.'));
+      if (d is Map && d['two_factor_required'] == true) {
+        pending2fa = Map<String, dynamic>.from(d);
+        return true;
       }
-      final refresh = d[ApiContract.refreshTokenKey];
-      await _tokens.save(
-          access: access, refresh: refresh is String ? refresh : null);
-      if (d['user'] is Map) {
-        user = Map<String, dynamic>.from(d['user'] as Map);
-        await _cache.put('me', user);
-      }
-      final id = identity;
-      if (id != null) await onLoggedIn?.call(id);
-      _status = AuthStatus.authenticated;
-      notifyListeners();
+      await _finishLogin(d);
+      return false;
     } catch (e) {
-      if (e is DioException && e.response?.statusCode == 404) {
-        throw ApiException(tr('Connexion impossible pour le moment. Réessayez plus tard.'),
-            statusCode: 404);
-      }
-      if (e is DioException && e.response == null && e.type == DioExceptionType.unknown) {
-        throw ApiException(tr('Connexion impossible. Vérifiez votre Internet et réessayez.'),
-            isOffline: true);
-      }
-      throw ApiException.from(e);
+      throw _mapLoginError(e);
     }
   }
+
+  Future<void> verify2fa(String code) async {
+    final id = pending2fa?['challenge_id'];
+    if (id == null) throw ApiException(tr('Connexion impossible pour le moment. Réessayez plus tard.'));
+    try {
+      final res = await api.dio.post(
+        'auth/login/2fa/',
+        data: {'challenge_id': id, 'code': code.trim()},
+        options: Options(extra: {'noAuth': true}),
+      );
+      await _finishLogin(res.data);
+    } catch (e) {
+      final ex = _mapLoginError(e);
+      if (ex.statusCode == 403 || ex.code == 'two_factor_expired') pending2fa = null;
+      throw ex;
+    }
+  }
+
+  Future<void> resend2fa() async {
+    final id = pending2fa?['challenge_id'];
+    if (id == null) return;
+    try {
+      final res = await api.dio.post(
+        'auth/login/2fa/resend/',
+        data: {'challenge_id': id},
+        options: Options(extra: {'noAuth': true}),
+      );
+      if (res.data is Map) pending2fa = Map<String, dynamic>.from(res.data as Map);
+    } catch (e) {
+      throw _mapLoginError(e);
+    }
+  }
+
+  void cancel2fa() => pending2fa = null;
 
   /// Efface uniquement les jetons : la file de synchronisation locale est
   /// conservée pour ne perdre aucune progression non envoyée.
