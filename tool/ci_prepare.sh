@@ -79,6 +79,18 @@ open(p,'w').write(s)
 PY
 fi
 
+# ---- Lint désactivé : le lint d'Android plante (bug d'outil) sur url_launcher/webview ----
+mkdir -p "$HOME/.gradle/init.d"
+cat > "$HOME/.gradle/init.d/nolint.gradle" <<'GRADLE'
+allprojects {
+    tasks.configureEach { t ->
+        if (t.name.startsWith("lintVital") || t.name.startsWith("lintAnalyze") || t.name.startsWith("lintReport") || t.name == "lint") {
+            t.enabled = false
+        }
+    }
+}
+GRADLE
+
 flutter pub get
 dart run flutter_launcher_icons
 echo "Projet Android prêt (Internet, notifications, rappels, icône)."
