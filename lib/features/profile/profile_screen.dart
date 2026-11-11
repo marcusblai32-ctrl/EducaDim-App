@@ -209,13 +209,30 @@ class _SoundSwitch extends StatefulWidget {
 
 class _SoundSwitchState extends State<_SoundSwitch> {
   @override
-  Widget build(BuildContext context) => SwitchListTile(
-        contentPadding: EdgeInsets.zero,
-        title: const Text('Sons des notifications et rappels', style: TextStyle(fontWeight: FontWeight.w700)),
-        value: AlertService.instance.soundEnabled,
-        onChanged: (v) async {
-          await AlertService.instance.setSound(v);
-          if (mounted) setState(() {});
-        },
-      );
+  Widget build(BuildContext context) => Column(children: [
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Sons des notifications et rappels', style: TextStyle(fontWeight: FontWeight.w700)),
+          value: AlertService.instance.soundEnabled,
+          onChanged: (v) async {
+            await AlertService.instance.setSound(v);
+            if (mounted) setState(() {});
+          },
+        ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            icon: const Icon(Icons.notifications_active_outlined),
+            label: Text(tr('Tester les notifications')),
+            onPressed: () async {
+              final msg = ScaffoldMessenger.of(context);
+              final err = await AlertService.instance
+                  .notify(tr('EducaDim'), tr('Les notifications fonctionnent sur cet appareil.'));
+              if (err != null) {
+                msg.showSnackBar(snackBarAnimationStyle: AnimationStyle.noAnimation, SnackBar(content: Text(err)));
+              }
+            },
+          ),
+        ),
+      ]);
 }

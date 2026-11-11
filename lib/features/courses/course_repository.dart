@@ -53,15 +53,16 @@ class CourseRepository {
       all.addAll(r.value.results);
       if (!r.value.hasNext) break;
     }
-    return Loaded(all.where((c) => c.access.hasAccess || !c.estPayant).toList(), fromCache: fromCache);
+    return Loaded(all.where((c) => c.access.hasAccess).toList(), fromCache: fromCache);
   }
 
-  /// Inscription silencieuse à un cours gratuit (idempotent) pour qu'il figure
-  /// aussi dans « Mes cours » sur le site. Échec ignoré (hors ligne).
+  /// Inscription explicite à un cours gratuit (idempotent). Lance ApiException en cas d'échec.
   Future<void> enrollFree(int courseId) async {
     try {
       await _api.dio.post('courses/$courseId/enroll/');
-    } catch (_) {}
+    } on DioException catch (e) {
+      throw mapDio(e);
+    }
   }
 
   Future<Loaded<CourseDetail>> detail(int id) =>

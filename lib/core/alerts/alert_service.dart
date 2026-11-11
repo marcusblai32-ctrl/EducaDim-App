@@ -30,7 +30,7 @@ class AlertService {
       );
       _ready = true;
     } catch (_) {
-      _ready = false; // l'application reste utilisable sans alertes
+      _ready = false; // réessayé plus tard
     }
   }
 
@@ -51,7 +51,7 @@ class AlertService {
   }
 
   // Le son d'un canal Android ne peut plus changer une fois créé : un canal par état du son.
-  NotificationDetails _details(String channel, String name) {
+  NotificationDetails _details(String channel, String name, {bool smallIcon = true}) {
     final id = '${channel}_${soundEnabled ? 's' : 'q'}';
     return NotificationDetails(
       android: AndroidNotificationDetails(
@@ -61,7 +61,7 @@ class AlertService {
         priority: Priority.max,
         playSound: soundEnabled,
         enableVibration: soundEnabled,
-        icon: 'ic_stat_educadim',
+        icon: smallIcon ? 'ic_stat_educadim' : null,
         color: const Color(0xFF1E40AF),
         category: AndroidNotificationCategory.message,
         visibility: NotificationVisibility.public,
@@ -71,11 +71,42 @@ class AlertService {
   }
 
   /// Notification immédiate avec son (nouvelle notification, nouveau message…).
-  Future<void> notify(String title, String body) async {
-    if (!_ready) return;
+  /// Retourne null si OK, sinon une raison lisible (permission refusée, etc.).
+  Future<String?> notify(String title, String body) async {
+    if (!_ready) {
+      await _retryInit();
+      if (!_ready) return tr('Les notifications ne sont pas disponibles sur cet appareil.');
+    }
     try {
-      _seq = _seq >= 899 ? 100 : _seq + 1;
-      await _plugin.show(_seq, title, body, _details('alerts', tr('Notifications et messages')));
+      final android =
+          _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      final enabled = await android?.areNotificationsEnabled();
+      if (enabled == false) {
+        final granted = await android?.requestNotificationsPermission();
+        if (granted != true) {
+          return tr('Les notifications sont désactivées pour EducaDim. Activez-les dans les paramètres Android.');
+        }
+      }
+    } catch (_) {}
+    _seq = _seq >= 899 ? 100 : _seq + 1;
+    for (final small in [true, false]) {
+      try {
+        await _plugin.show(
+            _seq, title, body, _details('alerts', tr('Notifications et messages'), smallIcon: small));
+        return null;
+      } catch (_) {
+        // icône de statut absente : on réessaie avec l'icône de l'application
+      }
+    }
+    return tr('Impossible d’afficher la notification.');
+  }
+
+  Future<void> _retryInit() async {
+    try {
+      await _plugin.initialize(
+        const InitializationSettings(android: AndroidInitializationSettings('@mipmap/ic_launcher')),
+      );
+      _ready = true;
     } catch (_) {}
   }
 
@@ -113,14 +144,19 @@ class AlertService {
         if (i == 0 && checkedToday) continue;
         final at = DateTime(day.year, day.month, day.day, hour, minute);
         if (!at.isAfter(now.add(const Duration(seconds: 30)))) continue;
-        await _plugin.zonedSchedule(
-          _reminderBase + i,
-          title,
-          body,
-          tz.TZDateTime.from(at, tz.UTC), // instant absolu : indépendant du fuseau
-          _details('reminders', tr('Rappels d’étude')),
-          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-        );
+        for (final small in [true, false]) {
+          try {
+            await _plugin.zonedSchedule(
+              _reminderBase + i,
+              title,
+              body,
+              tz.TZDateTime.from(at, tz.UTC), // instant absolu : indépendant du fuseau
+              _details('reminders', tr('Rappels d’étude'), smallIcon: small),
+              androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+            );
+            break;
+          } catch (_) {}
+        }
       }
     } catch (_) {}
   }

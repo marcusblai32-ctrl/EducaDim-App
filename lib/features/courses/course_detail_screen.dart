@@ -26,13 +26,7 @@ class CourseDetailScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Formation')),
       body: AsyncView<Loaded<CourseDetail>>(
-        load: () async {
-          final r = await repo.detail(courseId);
-          if (!r.fromCache && !r.value.course.estPayant && r.value.course.access.source == 'free') {
-            repo.enrollFree(courseId);
-          }
-          return r;
-        },
+        load: () => repo.detail(courseId),
         builder: (context, r, reload) => _Body(r.value, r.fromCache, reload),
       ),
     );
@@ -151,11 +145,26 @@ class _Body extends StatelessWidget {
                     const SizedBox(height: 6),
                     Text(tr('Tarif : {p}', {'p': c.prixLabel}), style: const TextStyle(fontWeight: FontWeight.w800)),
                     const SizedBox(height: 16),
-                    FilledButton(
-                      onPressed: () => launchUrl(Uri.parse('${ApiConfig.siteUrl}/fr/cours/${c.id}/'),
-                          mode: LaunchMode.externalApplication),
-                      child: const Text('S’inscrire et payer sur le site'),
-                    ),
+                    if (!c.estPayant)
+                      FilledButton(
+                        onPressed: () async {
+                          final msg = ScaffoldMessenger.of(context);
+                          try {
+                            await repo.enrollFree(c.id);
+                            await reload();
+                          } catch (e) {
+                            msg.showSnackBar(snackBarAnimationStyle: AnimationStyle.noAnimation,
+                                SnackBar(content: Text(ApiException.from(e).message)));
+                          }
+                        },
+                        child: Text(tr('S’inscrire gratuitement')),
+                      )
+                    else
+                      FilledButton(
+                        onPressed: () => launchUrl(Uri.parse('${ApiConfig.siteUrl}/fr/cours/${c.id}/'),
+                            mode: LaunchMode.externalApplication),
+                        child: const Text('S’inscrire et payer sur le site'),
+                      ),
                   ]),
                 ),
               )
