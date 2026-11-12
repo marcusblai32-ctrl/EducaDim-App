@@ -219,5 +219,15 @@ class _SoundSwitchState extends State<_SoundSwitch> {
             if (mounted) setState(() {});
           },
         ),
+        FutureBuilder<String>(
+          future: AlertService.instance.statusLine(),
+          builder: (context, snap) => Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(snap.data ?? '…', style: Theme.of(context).textTheme.bodySmall),
+            ),
+          ),
+        ),
       ]);
 }

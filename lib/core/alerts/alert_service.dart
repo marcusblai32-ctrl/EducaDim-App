@@ -244,4 +244,22 @@ class AlertService {
       return -1;
     }
   }
+
+  /// Résumé lisible de l'état des rappels (affiché dans Profil) pour comprendre un éventuel blocage.
+  Future<String> statusLine() async {
+    if (!_ready) await _retryInit();
+    if (!_ready) return tr('Notifications indisponibles (initialisation échouée).');
+    String perm = '?';
+    String exact = '?';
+    try {
+      final a = _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      if (a != null) {
+        perm = (await a.areNotificationsEnabled()) == true ? 'oui' : 'non';
+        exact = (await a.canScheduleExactNotifications()) == true ? 'oui' : 'non';
+      }
+    } catch (_) {}
+    final n = await pendingCount();
+    final err = lastError == null ? '' : ' · erreur : ${lastError!.length > 120 ? lastError!.substring(0, 120) : lastError}';
+    return '${tr('Rappels programmés')} : $n · ${tr('notifications autorisées')} : $perm · ${tr('alarmes exactes')} : $exact$err';
+  }
 }
