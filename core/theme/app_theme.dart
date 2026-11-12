@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'colors.dart';
@@ -47,13 +46,12 @@ class AppTheme {
     return base.copyWith(
       splashFactory: NoSplash.splashFactory, // aucun effet d'ondulation
       visualDensity: VisualDensity.adaptivePlatformDensity,
-      // Android / Windows : changement de page instantané (appareils modestes). iOS : le geste
-      // « glisser depuis le bord gauche pour revenir » doit rester disponible.
+      // Changement de page instantané sur toutes les plateformes (appareils modestes).
       pageTransitionsTheme: const PageTransitionsTheme(builders: {
         TargetPlatform.android: _NoTransitionBuilder(),
-        TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+        TargetPlatform.iOS: _NoTransitionBuilder(),
         TargetPlatform.linux: _NoTransitionBuilder(),
-        TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+        TargetPlatform.macOS: _NoTransitionBuilder(),
         TargetPlatform.windows: _NoTransitionBuilder(),
       }),
       scrollbarTheme: ScrollbarThemeData(
