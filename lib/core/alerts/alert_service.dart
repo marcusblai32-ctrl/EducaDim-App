@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart' show Color;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 import '../i18n/lang.dart';
 
@@ -16,6 +17,9 @@ class AlertService {
   bool _ready = false;
   bool soundEnabled = true;
   int _seq = 100;
+  bool _tzReady = false;
+  /// Dernière erreur de programmation (affichée par le bouton de test des rappels).
+  String? lastError;
 
   static const _soundKey = 'alert_sound';
   static const _reminderBase = 9000;
@@ -142,10 +146,27 @@ class AlertService {
     required int streak,
     required bool checkedToday,
   }) async {
-    if (!_ready) return;
+    if (!_ready) await _retryInit();
+    if (!_ready) {
+      lastError = 'init';
+      return;
+    }
+    lastError = null;
+    if (!_tzReady) {
+      try {
+        tzdata.initializeTimeZones();
+      } catch (_) {}
+      _tzReady = true;
+    }
     try {
       await cancelReminders();
       if (weekdays.isEmpty) return;
+      // Android 13+ : sans permission, la programmation est ignorée.
+      final android =
+          _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      if (await android?.areNotificationsEnabled() == false) {
+        await android?.requestNotificationsPermission();
+      }
       final now = DateTime.now();
       final title = tr('C’est l’heure d’apprendre !');
       final body = streak > 0
@@ -157,20 +178,33 @@ class AlertService {
         if (i == 0 && checkedToday) continue;
         final at = DateTime(day.year, day.month, day.day, hour, minute);
         if (!at.isAfter(now.add(const Duration(seconds: 30)))) continue;
-        for (final small in [true, false]) {
-          try {
-            await _plugin.zonedSchedule(
-              _reminderBase + i,
-              title,
-              body,
-              tz.TZDateTime.from(at, tz.UTC), // instant absolu : indépendant du fuseau
-              _details('reminders', tr('Rappels d’étude'), smallIcon: small),
-              androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-            );
-            break;
-          } catch (_) {}
+        await _scheduleOne(_reminderBase + i, title, body, at);
+      }
+    } catch (e) {
+      lastError = '$e';
+    }
+  }
+
+  /// Programme une notification à `at` ; essaie plusieurs combinaisons (icône, mode d'alarme).
+  Future<bool> _scheduleOne(int id, String title, String body, DateTime at) async {
+    final when = tz.TZDateTime.from(at.toUtc(), tz.UTC); // instant absolu : indépendant du fuseau
+    for (final mode in [AndroidScheduleMode.inexactAllowWhileIdle, AndroidScheduleMode.inexact]) {
+      for (final small in [true, false]) {
+        try {
+          await _plugin.zonedSchedule(
+            id,
+            title,
+            body,
+            when,
+            _details('reminders', tr('Rappels d’étude'), smallIcon: small),
+            androidScheduleMode: mode,
+          );
+          return true;
+        } catch (e) {
+          lastError = '$e';
         }
       }
-    } catch (_) {}
+    }
+    return false;
   }
 }
