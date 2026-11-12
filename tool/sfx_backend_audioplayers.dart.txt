@@ -1,0 +1,24 @@
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:path_provider/path_provider.dart';
+
+final Map<String, String> _files = {};
+AudioPlayer? _player;
+
+/// Joue un WAV court : écrit une fois le fichier dans le dossier temporaire, puis le lit.
+Future<void> playWav(String key, Uint8List bytes) async {
+  try {
+    var path = _files[key];
+    if (path == null || !File(path).existsSync()) {
+      final dir = await getTemporaryDirectory();
+      final f = File('${dir.path}${Platform.pathSeparator}educadim_sfx_$key.wav');
+      await f.writeAsBytes(bytes, flush: true);
+      path = f.path;
+      _files[key] = path;
+    }
+    final p = _player ??= AudioPlayer();
+    await p.stop();
+    await p.play(DeviceFileSource(path), volume: 0.9);
+  } catch (_) {}
+}

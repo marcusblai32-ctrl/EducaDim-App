@@ -21,6 +21,17 @@ class AlertService {
   /// Dernière erreur de programmation (affichée par le bouton de test des rappels).
   String? lastError;
 
+  /// Vrai si la programmation système a échoué : l'application prend alors le relais quand elle est ouverte.
+  bool scheduleBroken = false;
+
+  /// Titre et texte d'un rappel d'étude.
+  List<String> reminderText(int streak) => [
+        tr('C’est l’heure d’apprendre !'),
+        streak > 0
+            ? tr('Votre série de {n} jours vous attend. Connectez-vous aujourd’hui pour la garder !', {'n': streak})
+            : tr('Prenez quelques minutes pour avancer dans vos cours.'),
+      ];
+
   static const _soundKey = 'alert_sound';
   static const _reminderBase = 9000;
   static const _reminderSlots = 30;
@@ -61,9 +72,13 @@ class AlertService {
     await _prefs?.setBool(_soundKey, v);
   }
 
-  // Le son d'un canal Android ne peut plus changer une fois créé : un canal par état du son.
-  NotificationDetails _details(String channel, String name, {bool smallIcon = true}) {
-    final id = '${channel}_${soundEnabled ? 's' : 'q'}';
+  // Le son d'un canal Android ne peut plus changer une fois créé : un canal par type de notification
+  // (message, notification, rappel) et par état du son. « v2 » = canaux avec sons personnalisés.
+  static const _rawSounds = {'message': 'snd_message', 'notif': 'snd_notification', 'reminder': 'snd_reminder'};
+
+  NotificationDetails _details(String kind, String name, {bool smallIcon = true}) {
+    final id = '${kind}_v2_${soundEnabled ? 's' : 'q'}';
+    final raw = _rawSounds[kind];
     return NotificationDetails(
       android: AndroidNotificationDetails(
         id,
@@ -71,10 +86,11 @@ class AlertService {
         importance: Importance.max, // bulle qui s'affiche au-dessus du rideau (heads-up)
         priority: Priority.max,
         playSound: soundEnabled,
+        sound: soundEnabled && raw != null ? RawResourceAndroidNotificationSound(raw) : null,
         enableVibration: soundEnabled,
         icon: smallIcon ? 'ic_stat_educadim' : null,
         color: const Color(0xFF1E40AF),
-        category: AndroidNotificationCategory.message,
+        category: kind == 'reminder' ? AndroidNotificationCategory.reminder : AndroidNotificationCategory.message,
         visibility: NotificationVisibility.public,
         ticker: name,
       ),
@@ -84,7 +100,7 @@ class AlertService {
 
   /// Notification immédiate avec son (nouvelle notification, nouveau message…).
   /// Retourne null si OK, sinon une raison lisible (permission refusée, etc.).
-  Future<String?> notify(String title, String body) async {
+  Future<String?> notify(String title, String body, {String kind = 'notif'}) async {
     if (!_ready) {
       await _retryInit();
       if (!_ready) return tr('Les notifications ne sont pas disponibles sur cet appareil.');
@@ -103,8 +119,8 @@ class AlertService {
     _seq = _seq >= 899 ? 100 : _seq + 1;
     for (final small in [true, false]) {
       try {
-        await _plugin.show(
-            _seq, title, body, _details('alerts', tr('Notifications et messages'), smallIcon: small));
+        await _plugin.show(_seq, title, body,
+            _details(kind, kind == 'message' ? tr('Messages') : tr('Notifications'), smallIcon: small));
         return null;
       } catch (_) {
         // icône de statut absente : on réessaie avec l'icône de l'application
@@ -168,27 +184,38 @@ class AlertService {
         await android?.requestNotificationsPermission();
       }
       final now = DateTime.now();
-      final title = tr('C’est l’heure d’apprendre !');
-      final body = streak > 0
-          ? tr('Votre série de {n} jours vous attend. Connectez-vous aujourd’hui pour la garder !', {'n': streak})
-          : tr('Prenez quelques minutes pour avancer dans vos cours.');
+      final texts = reminderText(streak);
+      final title = texts[0];
+      final body = texts[1];
+      var exact = false;
+      try {
+        exact = await android?.canScheduleExactNotifications() ?? false;
+      } catch (_) {}
+      var planned = 0;
       for (var i = 0; i < 21; i++) {
         final day = DateTime(now.year, now.month, now.day + i);
         if (!weekdays.contains(day.weekday - 1)) continue;
         if (i == 0 && checkedToday) continue;
         final at = DateTime(day.year, day.month, day.day, hour, minute);
         if (!at.isAfter(now.add(const Duration(seconds: 30)))) continue;
-        await _scheduleOne(_reminderBase + i, title, body, at);
+        if (await _scheduleOne(_reminderBase + i, title, body, at, exact: exact)) planned++;
       }
+      // Vérification : les rappels sont-ils vraiment enregistrés dans le système ?
+      final pending = planned == 0 ? 0 : await pendingCount();
+      scheduleBroken = planned > 0 && pending == 0;
     } catch (e) {
       lastError = '$e';
     }
   }
 
   /// Programme une notification à `at` ; essaie plusieurs combinaisons (icône, mode d'alarme).
-  Future<bool> _scheduleOne(int id, String title, String body, DateTime at) async {
+  Future<bool> _scheduleOne(int id, String title, String body, DateTime at, {bool exact = false}) async {
     final when = tz.TZDateTime.from(at.toUtc(), tz.UTC); // instant absolu : indépendant du fuseau
-    for (final mode in [AndroidScheduleMode.inexactAllowWhileIdle, AndroidScheduleMode.inexact]) {
+    for (final mode in [
+      if (exact) AndroidScheduleMode.exactAllowWhileIdle,
+      AndroidScheduleMode.inexactAllowWhileIdle,
+      AndroidScheduleMode.inexact,
+    ]) {
       for (final small in [true, false]) {
         try {
           await _plugin.zonedSchedule(
@@ -196,7 +223,7 @@ class AlertService {
             title,
             body,
             when,
-            _details('reminders', tr('Rappels d’étude'), smallIcon: small),
+            _details('reminder', tr('Rappels d’étude'), smallIcon: small),
             androidScheduleMode: mode,
           );
           return true;
@@ -206,5 +233,15 @@ class AlertService {
       }
     }
     return false;
+  }
+
+  /// Nombre de rappels réellement enregistrés dans le système (-1 si inconnu).
+  Future<int> pendingCount() async {
+    try {
+      final list = await _plugin.pendingNotificationRequests();
+      return list.where((r) => r.id >= _reminderBase && r.id < _reminderBase + _reminderSlots).length;
+    } catch (_) {
+      return -1;
+    }
   }
 }

@@ -115,7 +115,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     final chat = context.read<ChatController>();
     _chat = chat;
     chat.openRoom(widget.roomId);
-    _poll = Timer.periodic(const Duration(seconds: 8), (_) => chat.fetch(widget.roomId));
+    _poll = Timer.periodic(const Duration(seconds: 12), (_) {
+      if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) chat.fetch(widget.roomId);
+    });
   }
 
   @override

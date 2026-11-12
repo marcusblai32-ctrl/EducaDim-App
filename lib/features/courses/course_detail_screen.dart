@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart' hide Text;
+import '../../core/audio/sfx.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -151,6 +152,7 @@ class _Body extends StatelessWidget {
                           final msg = ScaffoldMessenger.of(context);
                           try {
                             await repo.enrollFree(c.id);
+                            Sfx.complete();
                             await reload();
                           } catch (e) {
                             msg.showSnackBar(snackBarAnimationStyle: AnimationStyle.noAnimation,

@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart' hide Text;
 import '../../core/i18n/text.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../core/audio/sfx.dart';
 import '../../core/config/api_config.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/theme/colors.dart';
@@ -119,6 +121,7 @@ class _LessonBody extends StatelessWidget {
             ? null
             : () async {
                 await progress.complete(l.id, l.courseId);
+                unawaited(Sfx.complete());
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(snackBarAnimationStyle: AnimationStyle.noAnimation, SnackBar(
                       content: Text(tr('Progression enregistrée. Synchronisation automatique dès que possible.'))));

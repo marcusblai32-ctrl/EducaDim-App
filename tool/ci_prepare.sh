@@ -19,6 +19,8 @@ add_perm INTERNET
 add_perm POST_NOTIFICATIONS
 add_perm VIBRATE
 add_perm RECEIVE_BOOT_COMPLETED
+add_perm SCHEDULE_EXACT_ALARM
+add_perm USE_EXACT_ALARM
 if ! grep -q "ScheduledNotificationReceiver" "$M"; then
   python3 - "$M" <<'PY'
 import sys
@@ -65,6 +67,7 @@ if [ -d assets/android_res ]; then
   cp -r assets/android_res/. android/app/src/main/res/
 fi
 [ -f android/app/src/main/res/drawable-mdpi/ic_stat_educadim.png ] || { echo "ERREUR: icône de notification absente"; exit 1; }
+[ -f android/app/src/main/res/raw/snd_reminder.wav ] || { echo "ERREUR: sons de notification absents (res/raw)"; exit 1; }
 if ! grep -q "isMinifyEnabled" "$G" ; then
   python3 - "$G" <<'PY'
 import sys,re
@@ -90,6 +93,15 @@ allprojects {
     }
 }
 GRADLE
+
+# ---- Sons de l'interface (succès / échec / terminé) : paquet audio ajouté seulement ici (CI),
+# pubspec.yaml du dépôt reste intact. Si l'ajout échoue, on garde la version de base (clic système).
+if flutter pub add audioplayers; then
+  cp tool/sfx_backend_audioplayers.dart.txt lib/core/audio/sfx_backend.dart
+  echo "Sons activés (audioplayers)."
+else
+  echo "AVERTISSEMENT: audioplayers indisponible, sons d'interface en version de base."
+fi
 
 flutter pub get
 dart run flutter_launcher_icons

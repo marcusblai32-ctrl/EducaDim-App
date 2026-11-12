@@ -219,20 +219,5 @@ class _SoundSwitchState extends State<_SoundSwitch> {
             if (mounted) setState(() {});
           },
         ),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: TextButton.icon(
-            icon: const Icon(Icons.notifications_active_outlined),
-            label: Text(tr('Tester les notifications')),
-            onPressed: () async {
-              final msg = ScaffoldMessenger.of(context);
-              final err = await AlertService.instance
-                  .notify(tr('EducaDim'), tr('Les notifications fonctionnent sur cet appareil.'));
-              if (err != null) {
-                msg.showSnackBar(snackBarAnimationStyle: AnimationStyle.noAnimation, SnackBar(content: Text(err)));
-              }
-            },
-          ),
-        ),
       ]);
 }

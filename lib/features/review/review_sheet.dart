@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart' hide Text;
+import '../../core/audio/sfx.dart';
 import 'package:provider/provider.dart';
 import '../../core/i18n/text.dart';
 import '../../core/network/api_exception.dart';
@@ -46,6 +47,7 @@ class _ReviewSheetState extends State<_ReviewSheet> {
     try {
       await context.read<ReviewService>().submit(_stars, _c.text);
       nav.pop();
+      Sfx.complete();
       msg.showSnackBar(snackBarAnimationStyle: AnimationStyle.noAnimation, SnackBar(content: Text('Merci pour votre avis !')));
     } on ApiException catch (e) {
       msg.showSnackBar(snackBarAnimationStyle: AnimationStyle.noAnimation, SnackBar(content: Text(e.message)));

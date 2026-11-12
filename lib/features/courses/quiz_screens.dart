@@ -4,6 +4,7 @@ import '../../core/i18n/text.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../core/audio/sfx.dart';
 import '../../core/config/api_config.dart';
 import '../../core/db/outbox_repository.dart';
 import '../../core/network/api_exception.dart';
@@ -438,6 +439,8 @@ class _ResultData {
   final bool fromCache;
 }
 
+final Set<int> _soundPlayed = {};
+
 class QuizResultScreen extends StatelessWidget {
   const QuizResultScreen(this.attemptId, {super.key});
   final int attemptId;
@@ -493,6 +496,10 @@ class QuizResultScreen extends StatelessWidget {
           }
           final r = d.result!;
           final ok = r.reussi == true;
+          // Son de réussite / d'échec, une seule fois par tentative.
+          if (_soundPlayed.add(attemptId)) {
+            WidgetsBinding.instance.addPostFrameCallback((_) => ok ? Sfx.success() : Sfx.fail());
+          }
           final byQ = {for (final x in r.details) x.questionId: x};
           return ListView(padding: const EdgeInsets.all(16), children: [
             if (d.fromCache) const OfflineBanner(),

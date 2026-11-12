@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart' show WidgetsBinding, AppLifecycleState;
 import '../../core/i18n/lang.dart';
 import '../../core/alerts/alert_service.dart';
 import '../../core/db/cache_store.dart';
@@ -76,8 +77,8 @@ class NotificationService extends ChangeNotifier {
 
   void startPolling(bool Function() isLoggedIn) {
     _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 90), (_) {
-      if (isLoggedIn()) refresh(silent: true);
+    _timer = Timer.periodic(const Duration(seconds: 120), (_) {
+      if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed && isLoggedIn()) refresh(silent: true);
     });
   }
 

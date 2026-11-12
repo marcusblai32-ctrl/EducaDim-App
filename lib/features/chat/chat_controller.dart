@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart' show WidgetsBinding, AppLifecycleState;
 import '../../core/i18n/lang.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/alerts/alert_service.dart';
+import '../../core/audio/sfx.dart';
 import '../../core/db/app_database.dart';
 import '../../core/db/cache_store.dart';
 import '../../core/db/outbox_repository.dart';
@@ -149,8 +151,8 @@ class ChatController extends ChangeNotifier {
   /// Vérifie les salons toutes les 45 s (application ouverte) : son pour un nouveau message.
   void startPolling(bool Function() loggedIn) {
     _poll?.cancel();
-    _poll = Timer.periodic(const Duration(seconds: 45), (_) {
-      if (loggedIn()) loadRooms(silent: true);
+    _poll = Timer.periodic(const Duration(seconds: 60), (_) {
+      if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed && loggedIn()) loadRooms(silent: true);
     });
   }
 
@@ -161,7 +163,7 @@ class ChatController extends ChangeNotifier {
       final prev = _seenLast[r.id];
       final isNew = prev == null || at.isAfter(prev);
       if (_roomsBaseline && isNew && !r.lastMine && r.id != activeRoom) {
-        AlertService.instance.notify(tr('Nouveau message'), '${r.titre} — ${r.lastUser ?? ''}: ${r.lastText ?? ''}');
+        AlertService.instance.notify(tr('Nouveau message'), '${r.titre} — ${r.lastUser ?? ''}: ${r.lastText ?? ''}', kind: 'message');
       }
       if (isNew) _seenLast[r.id] = at;
     }
@@ -260,7 +262,8 @@ class ChatController extends ChangeNotifier {
       final known = {for (final m in have) m.serverId};
       final fresh = incoming.where((m) => !known.contains(m.serverId) && !m.mine).toList();
       if (have.isNotEmpty && fresh.isNotEmpty) {
-        AlertService.instance.notify(tr('Nouveau message'), '${fresh.last.userName}: ${fresh.last.body}');
+        // Salon ouvert à l'écran : son dans l'application (pas de notification système).
+        Sfx.received();
       }
       final byId = {for (final m in have) m.serverId: m};
       for (final m in incoming) {
@@ -291,6 +294,7 @@ class ChatController extends ChangeNotifier {
       'state': 'pending',
       'room_id': roomId,
     });
+    Sfx.sent();
     await _outbox.enqueue(
       'chat_message',
       {'room_id': roomId, 'client_id': id, 'contenu': body},

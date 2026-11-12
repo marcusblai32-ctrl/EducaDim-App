@@ -1,3 +1,4 @@
+import 'core/audio/sfx.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -64,7 +65,10 @@ Future<void> main() async {
 
   bool loggedIn() => auth.status == AuthStatus.authenticated;
 
-  study.onAward = () => notifications.refresh(silent: true);
+  study.onAward = () {
+    Sfx.success(); // palier de série atteint
+    notifications.refresh(silent: true);
+  };
   sync.afterFlush = () async {
     if (!loggedIn()) return;
     await progress.pull();

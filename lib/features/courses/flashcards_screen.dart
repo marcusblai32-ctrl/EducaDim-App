@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart' hide Text;
+import '../../core/audio/sfx.dart';
 import 'package:provider/provider.dart';
 import '../../core/i18n/text.dart';
 import '../../core/network/api_exception.dart';
@@ -67,6 +68,11 @@ class _DeckState extends State<_Deck> {
   final Set<int> _review = {};
 
   void _answer(bool knew) {
+    if (_queue.length == 1 && knew) {
+      Sfx.success(); // dernière carte maîtrisée : séance terminée
+    } else {
+      knew ? Sfx.complete() : Sfx.fail();
+    }
     setState(() {
       final c = _queue.removeAt(0);
       if (knew) {
