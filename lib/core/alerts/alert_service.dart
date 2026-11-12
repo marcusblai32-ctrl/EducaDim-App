@@ -153,8 +153,8 @@ class AlertService {
   }
 
   /// Programme les rappels des 3 prochaines semaines aux jours/heure choisis.
-  /// `weekdays` : lundi = 0 … dimanche = 6. Si l'apprenant s'est déjà connecté aujourd'hui,
-  /// le rappel d'aujourd'hui est supprimé.
+  /// `weekdays` : lundi = 0 … dimanche = 6. Le rappel sonne à l'heure choisie,
+  /// même si l'application a déjà été ouverte aujourd'hui.
   Future<void> scheduleReminders({
     required Set<int> weekdays,
     required int hour,
@@ -195,7 +195,6 @@ class AlertService {
       for (var i = 0; i < 21; i++) {
         final day = DateTime(now.year, now.month, now.day + i);
         if (!weekdays.contains(day.weekday - 1)) continue;
-        if (i == 0 && checkedToday) continue;
         final at = DateTime(day.year, day.month, day.day, hour, minute);
         if (!at.isAfter(now.add(const Duration(seconds: 30)))) continue;
         if (await _scheduleOne(_reminderBase + i, title, body, at, exact: exact)) planned++;
