@@ -26,7 +26,12 @@ class AlertService {
     soundEnabled = prefs.getBool(_soundKey) ?? true;
     try {
       await _plugin.initialize(
-        const InitializationSettings(android: AndroidInitializationSettings('@mipmap/ic_launcher')),
+        const InitializationSettings(
+          android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+          // iOS : la permission est demandée plus tard (requestPermission), pas au lancement.
+          iOS: DarwinInitializationSettings(
+              requestAlertPermission: false, requestBadgePermission: false, requestSoundPermission: false),
+        ),
       );
       _ready = true;
     } catch (_) {
@@ -37,6 +42,8 @@ class AlertService {
   Future<bool> requestPermission() async {
     if (!_ready) return false;
     try {
+      final ios = _plugin.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
+      if (ios != null) return (await ios.requestPermissions(alert: true, badge: true, sound: true)) ?? false;
       final android =
           _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
       return (await android?.requestNotificationsPermission()) ?? true;
@@ -67,6 +74,7 @@ class AlertService {
         visibility: NotificationVisibility.public,
         ticker: name,
       ),
+      iOS: DarwinNotificationDetails(presentAlert: true, presentBadge: true, presentSound: soundEnabled),
     );
   }
 
@@ -104,7 +112,12 @@ class AlertService {
   Future<void> _retryInit() async {
     try {
       await _plugin.initialize(
-        const InitializationSettings(android: AndroidInitializationSettings('@mipmap/ic_launcher')),
+        const InitializationSettings(
+          android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+          // iOS : la permission est demandée plus tard (requestPermission), pas au lancement.
+          iOS: DarwinInitializationSettings(
+              requestAlertPermission: false, requestBadgePermission: false, requestSoundPermission: false),
+        ),
       );
       _ready = true;
     } catch (_) {}

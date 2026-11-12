@@ -34,3 +34,16 @@ class EdColors {
     end: Alignment.bottomRight,
   );
 }
+
+/// Rayons : une hiérarchie claire (le héros est plus arrondi que les cartes, les cartes que les champs).
+class EdRadius {
+  static const double control = 14;
+  static const double card = 20;
+  static const double hero = 28;
+}
+
+/// Mise en page adaptative : téléphone < 840 px, tablette / ordinateur ≥ 840 px.
+class EdLayout {
+  static const double wide = 840;
+  static const double maxContent = 1040;
+}

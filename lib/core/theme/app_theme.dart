@@ -27,14 +27,15 @@ class AppTheme {
 
     final base = ThemeData(brightness: b, colorScheme: scheme, useMaterial3: true);
     final body = GoogleFonts.dmSansTextTheme(base.textTheme).apply(bodyColor: ink, displayColor: ink);
-    TextStyle head(TextStyle? s, double size, [FontWeight w = FontWeight.w800]) => GoogleFonts.manrope(
-          textStyle: s,
-          fontWeight: w,
-          fontSize: size,
-          letterSpacing: -0.4,
-          height: 1.2,
-          color: ink,
-        );
+    // Titres : Bricolage Grotesque (la même police que le site EducaDim) ; texte courant : DM Sans.
+    TextStyle head(TextStyle? s, double size, [FontWeight w = FontWeight.w800]) =>
+        GoogleFonts.getFont('Bricolage Grotesque',
+            textStyle: s,
+            fontWeight: w,
+            fontSize: size,
+            letterSpacing: -0.6,
+            height: 1.15,
+            color: ink);
 
     final r14 = RoundedRectangleBorder(borderRadius: BorderRadius.circular(14));
     OutlineInputBorder border(Color c, [double w = 1]) => OutlineInputBorder(
@@ -44,16 +45,34 @@ class AppTheme {
 
     return base.copyWith(
       splashFactory: NoSplash.splashFactory, // aucun effet d'ondulation
+      visualDensity: VisualDensity.adaptivePlatformDensity,
+      // Android / Windows : changement de page instantané (appareils modestes). iOS : le geste
+      // « glisser depuis le bord gauche pour revenir » doit rester disponible.
       pageTransitionsTheme: const PageTransitionsTheme(builders: {
         TargetPlatform.android: _NoTransitionBuilder(),
-        TargetPlatform.iOS: _NoTransitionBuilder(),
+        TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
         TargetPlatform.linux: _NoTransitionBuilder(),
-        TargetPlatform.macOS: _NoTransitionBuilder(),
+        TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
         TargetPlatform.windows: _NoTransitionBuilder(),
       }),
+      scrollbarTheme: ScrollbarThemeData(
+        thickness: const WidgetStatePropertyAll(6),
+        radius: const Radius.circular(8),
+        thumbColor: WidgetStatePropertyAll(ink.withValues(alpha: 0.28)),
+      ),
+      navigationRailTheme: NavigationRailThemeData(
+        backgroundColor: surface,
+        indicatorColor: primary.withValues(alpha: 0.14),
+        selectedIconTheme: IconThemeData(color: primary),
+        unselectedIconTheme: IconThemeData(color: ink.withValues(alpha: 0.6)),
+        selectedLabelTextStyle:
+            GoogleFonts.dmSans(fontSize: 12, fontWeight: FontWeight.w800, color: primary),
+        unselectedLabelTextStyle:
+            GoogleFonts.dmSans(fontSize: 12, fontWeight: FontWeight.w600, color: ink.withValues(alpha: 0.7)),
+      ),
       scaffoldBackgroundColor: bg,
       textTheme: body.copyWith(
-        headlineLarge: head(body.headlineLarge, 28),
+        headlineLarge: head(body.headlineLarge, 30),
         headlineMedium: head(body.headlineMedium, 22),
         titleLarge: head(body.titleLarge, 18),
         titleMedium: head(body.titleMedium, 16, FontWeight.w700),
@@ -74,7 +93,7 @@ class AppTheme {
         elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(EdRadius.card),
           side: BorderSide(color: line),
         ),
       ),

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart' hide Text;
+import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import '../config/api_config.dart';
 import '../i18n/text.dart';
@@ -116,7 +117,10 @@ class _ControlledVideoState extends State<ControlledVideo> {
                 ),
               ])
             : InkWell(
-                onTap: () => setState(() => _active = true),
+                // Windows : pas de WebView intégrée → la vidéo s'ouvre dans le navigateur du système.
+                onTap: Theme.of(context).platform == TargetPlatform.windows
+                    ? () => launchUrl(Uri.parse(widget.url), mode: LaunchMode.externalApplication)
+                    : () => setState(() => _active = true),
                 child: Container(
                   decoration: const BoxDecoration(gradient: EdColors.hero),
                   child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [

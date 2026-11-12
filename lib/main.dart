@@ -6,6 +6,7 @@ import 'dart:async';
 import 'core/alerts/alert_service.dart';
 import 'core/alerts/background.dart';
 import 'core/db/app_database.dart';
+import 'core/platform/desktop_init.dart';
 import 'core/i18n/lang.dart';
 import 'core/db/cache_store.dart';
 import 'core/db/outbox_repository.dart';
@@ -32,6 +33,7 @@ Future<void> main() async {
   final prefs = await SharedPreferences.getInstance();
   await Lang.instance.init(prefs);
   await AlertService.instance.init(prefs);
+  await initDesktop(); // Windows : SQLite via FFI (sans effet sur téléphone)
   final db = await AppDatabase.open();
   final cache = CacheStore(db);
   final tokens = TokenStore();

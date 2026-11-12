@@ -1,0 +1,7 @@
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+/// Version Windows : SQLite via FFI (sqflite ne fonctionne pas sur Windows sans cela).
+Future<void> initDesktop() async {
+  sqfliteFfiInit();
+  databaseFactory = databaseFactoryFfi;
+}

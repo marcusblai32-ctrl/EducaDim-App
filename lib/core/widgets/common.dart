@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart' hide Text;
 import '../i18n/text.dart';
 import '../theme/colors.dart';
@@ -45,20 +46,31 @@ class EmptyState extends StatelessWidget {
   }
 }
 
+/// Sur-titre : un petit trait rouge (le « trait de correction » du professeur) + texte en casse normale.
 class Eyebrow extends StatelessWidget {
   const Eyebrow(this.text, {super.key, this.color});
   final String text;
   final Color? color;
   @override
-  Widget build(BuildContext context) => Text(
-        tr(text).toUpperCase(),
-        style: TextStyle(
-          fontSize: 11,
-          letterSpacing: 1.3,
-          fontWeight: FontWeight.w800,
-          color: color ?? Theme.of(context).colorScheme.primary,
+  Widget build(BuildContext context) {
+    final c = color ?? Theme.of(context).colorScheme.primary;
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Container(
+        width: 16,
+        height: 3,
+        decoration: BoxDecoration(color: EdColors.red, borderRadius: BorderRadius.circular(3)),
+      ),
+      const SizedBox(width: 8),
+      Flexible(
+        child: Text(
+          tr(text),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: c),
         ),
-      );
+      ),
+    ]);
+  }
 }
 
 class PageHeader extends StatelessWidget {
@@ -106,34 +118,105 @@ class HeroCard extends StatelessWidget {
   final Widget child;
   @override
   Widget build(BuildContext context) => ClipRRect(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(EdRadius.hero),
         child: Container(
           width: double.infinity,
           decoration: const BoxDecoration(gradient: EdColors.hero),
           child: Stack(children: [
-            Positioned(
-              right: -40,
-              top: -40,
-              child: Container(
-                width: 150,
-                height: 150,
-                decoration: BoxDecoration(
-                    shape: BoxShape.circle, color: Colors.white.withValues(alpha: 0.07)),
-              ),
-            ),
-            Positioned(
-              right: 30,
-              bottom: -50,
-              child: Container(
-                width: 110,
-                height: 110,
-                decoration: BoxDecoration(
-                    shape: BoxShape.circle, color: EdColors.red.withValues(alpha: 0.22)),
-              ),
-            ),
+            // Anneaux concentriques : rappel de l'anneau de progression, motif de la marque.
+            Positioned.fill(child: IgnorePointer(child: CustomPaint(painter: _RingsPainter()))),
             Padding(padding: const EdgeInsets.all(22), child: child),
           ]),
         ),
+      );
+}
+
+class _RingsPainter extends CustomPainter {
+  const _RingsPainter();
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width * 0.92, size.height * 0.08);
+    final p = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.4;
+    for (var i = 1; i <= 5; i++) {
+      p.color = Colors.white.withValues(alpha: 0.13 - i * 0.018);
+      canvas.drawCircle(center, 34.0 * i + 20, p);
+    }
+    canvas.drawCircle(
+        Offset(size.width * 0.06, size.height * 1.02), 54, Paint()..color = EdColors.red.withValues(alpha: 0.22));
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// Anneau de progression (0 → 1) avec un contenu au centre. Aucune animation (appareils modestes).
+class ProgressRing extends StatelessWidget {
+  const ProgressRing({
+    super.key,
+    required this.value,
+    this.size = 92,
+    this.stroke = 9,
+    this.color = Colors.white,
+    this.track,
+    this.child,
+  });
+  final double value;
+  final double size;
+  final double stroke;
+  final Color color;
+  final Color? track;
+  final Widget? child;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        width: size,
+        height: size,
+        child: CustomPaint(
+          painter: _RingPainter(value.clamp(0.0, 1.0), stroke, color, track ?? color.withValues(alpha: 0.22)),
+          child: Center(child: child),
+        ),
+      );
+}
+
+class _RingPainter extends CustomPainter {
+  _RingPainter(this.value, this.stroke, this.color, this.track);
+  final double value;
+  final double stroke;
+  final Color color;
+  final Color track;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final arc = rect.deflate(stroke / 2);
+    final base = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke
+      ..strokeCap = StrokeCap.round;
+    base.color = track;
+    canvas.drawArc(arc, 0, math.pi * 2, false, base);
+    if (value > 0) {
+      base.color = color;
+      canvas.drawArc(arc, -math.pi / 2, math.pi * 2 * value, false, base);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _RingPainter old) =>
+      old.value != value || old.color != color || old.track != track || old.stroke != stroke;
+}
+
+/// Limite la largeur du contenu sur grand écran (tablette, ordinateur) et le centre.
+class ContentWidth extends StatelessWidget {
+  const ContentWidth({super.key, required this.child, this.maxWidth = EdLayout.maxContent});
+  final Widget child;
+  final double maxWidth;
+  @override
+  Widget build(BuildContext context) => Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(constraints: BoxConstraints(maxWidth: maxWidth), child: child),
       );
 }
 
@@ -155,7 +238,7 @@ class StatTile extends StatelessWidget {
             Icon(icon, size: 20, color: t.colorScheme.primary),
             const SizedBox(height: 8),
           ],
-          Text(value, style: t.textTheme.headlineMedium),
+          Text(value, style: t.textTheme.headlineMedium?.copyWith(fontSize: 26)),
           const SizedBox(height: 2),
           Text(label,
               maxLines: 2,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart' hide Text;
+import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,6 +10,7 @@ import '../../core/widgets/common.dart';
 import '../auth/auth_controller.dart';
 import '../courses/course_repository.dart';
 import '../study/study_screens.dart' show StreakCard;
+import '../study/study_service.dart';
 import '../courses/course_widgets.dart';
 import '../courses/lesson_screen.dart' show kLastLessonKey;
 import '../courses/models.dart';
@@ -45,6 +47,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final sync = context.watch<SyncService>();
     final progress = context.watch<ProgressService>();
     final offline = context.watch<OfflineCourseService>();
+    final study = context.watch<StudyService>();
+    final wide = MediaQuery.sizeOf(context).width >= EdLayout.wide;
     final t = Theme.of(context);
     final muted = t.colorScheme.onSurface.withValues(alpha: 0.65);
     final name = auth.fullName.isNotEmpty ? auth.fullName : auth.firstName;
@@ -54,53 +58,84 @@ class _HomeScreenState extends State<HomeScreen> {
       child: ListView(padding: const EdgeInsets.fromLTRB(16, 14, 16, 100), children: [
         // ---- Salutation ----
         Row(children: [
-          InitialsAvatar(name.isEmpty ? '?' : name, size: 48),
-          const SizedBox(width: 12),
+          InitialsAvatar(name.isEmpty ? '?' : name, size: 52),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(_greeting(), style: TextStyle(color: muted, fontWeight: FontWeight.w600)),
+              Text(_greeting(), style: TextStyle(color: muted, fontWeight: FontWeight.w600, fontSize: 13.5)),
               Text(auth.firstName.isEmpty ? tr('Apprenant') : auth.firstName,
-                  maxLines: 1, overflow: TextOverflow.ellipsis, style: t.textTheme.headlineMedium),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: t.textTheme.headlineLarge?.copyWith(fontSize: 28)),
             ]),
           ),
         ]),
-        const SizedBox(height: 18),
+        const SizedBox(height: 20),
 
-        // ---- Reprise ----
+        // ---- Reprise (+ série d'étude) ----
         FutureBuilder<SharedPreferences>(
           future: _prefs,
           builder: (context, snap) {
             final parts = snap.data?.getString(kLastLessonKey)?.split('\u0001');
             final last = (parts != null && parts.length == 3) ? parts : null;
-            return HeroCard(
+            final streak = study.streak;
+            final hero = HeroCard(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Eyebrow(last != null ? 'Reprendre où vous en étiez' : 'Votre espace d’apprentissage',
-                    color: const Color(0xFFB9C2FF)),
-                const SizedBox(height: 10),
-                Text(last != null ? last[2] : tr('Prêt à apprendre ?'),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        color: Colors.white, fontSize: 23, fontWeight: FontWeight.w800, height: 1.2)),
-                const SizedBox(height: 6),
-                Text(tr('{n} leçon(s) terminée(s)', {'n': progress.totalCompleted}),
-                    style: const TextStyle(color: Color(0xFFDDE2FF))),
-                const SizedBox(height: 18),
-                FilledButton(
+                Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Eyebrow(last != null ? 'Reprendre où vous en étiez' : 'Votre espace d’apprentissage',
+                          color: const Color(0xFFB9C2FF)),
+                      const SizedBox(height: 12),
+                      Text(last != null ? last[2] : tr('Prêt à apprendre ?'),
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.getFont('Bricolage Grotesque',
+                              color: Colors.white,
+                              fontSize: 25,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.6,
+                              height: 1.12)),
+                      const SizedBox(height: 8),
+                      Text(tr('{n} leçon(s) terminée(s)', {'n': progress.totalCompleted}),
+                          style: const TextStyle(color: Color(0xFFDDE2FF), fontSize: 13.5)),
+                    ]),
+                  ),
+                  const SizedBox(width: 14),
+                  // Anneau : avancée vers le prochain palier de la série (toutes les 7 jours).
+                  ProgressRing(
+                    value: (streak % 7) / 7,
+                    size: 88,
+                    stroke: 8,
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      Text('$streak',
+                          style: GoogleFonts.getFont('Bricolage Grotesque',
+                              color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800, height: 1)),
+                      const Text('jours', style: TextStyle(color: Color(0xFFDDE2FF), fontSize: 11)),
+                    ]),
+                  ),
+                ]),
+                const SizedBox(height: 20),
+                FilledButton.icon(
                   style: FilledButton.styleFrom(
                       backgroundColor: Colors.white, foregroundColor: EdColors.blueDeep),
                   onPressed: () =>
                       last != null ? context.push('/lesson/${last[1]}') : context.go('/courses'),
-                  child: Text(last != null ? 'Continuer la leçon' : 'Voir mes cours'),
+                  icon: const Icon(Icons.play_arrow_rounded),
+                  label: Text(last != null ? 'Continuer la leçon' : 'Voir mes cours'),
                 ),
               ]),
             );
+            return wide
+                ? Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Expanded(flex: 3, child: hero),
+                    const SizedBox(width: 16),
+                    const Expanded(flex: 2, child: StreakCard()),
+                  ])
+                : Column(children: [hero, const SizedBox(height: 16), const StreakCard()]);
           },
         ),
         const SizedBox(height: 18),
-
-        const StreakCard(),
-        const SizedBox(height: 16),
 
         // ---- Accès rapides ----
         Row(children: [
@@ -186,27 +221,30 @@ class _Quick extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = Theme.of(context);
     return Expanded(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          child: Column(children: [
-            Container(
-              width: 54,
-              height: 54,
-              decoration: BoxDecoration(
-                color: t.colorScheme.primary.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: Icon(icon, color: t.colorScheme.primary),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: Material(
+          color: t.colorScheme.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(EdRadius.card),
+            side: BorderSide(color: t.dividerColor),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
+              child: Column(children: [
+                Icon(icon, color: t.colorScheme.primary, size: 26),
+                const SizedBox(height: 8),
+                Text(label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700)),
+              ]),
             ),
-            const SizedBox(height: 6),
-            Text(label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700)),
-          ]),
+          ),
         ),
       ),
     );

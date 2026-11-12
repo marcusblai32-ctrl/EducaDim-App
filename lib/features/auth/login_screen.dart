@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart' hide Text;
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/config/api_config.dart';
@@ -86,7 +87,7 @@ class _LoginScreenState extends State<LoginScreen> {
             width: double.infinity,
             decoration: const BoxDecoration(
               gradient: EdColors.hero,
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(36)),
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(40)),
             ),
             child: SafeArea(
               bottom: false,
@@ -110,8 +111,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Image.asset('assets/logo.png', height: 72),
                   ),
                   const SizedBox(height: 22),
-                  const Text('Bon retour !',
-                      style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800)),
+                  Text('Bon retour !',
+                      style: GoogleFonts.getFont('Bricolage Grotesque',
+                          color: Colors.white, fontSize: 32, fontWeight: FontWeight.w800, letterSpacing: -0.8)),
                   const SizedBox(height: 6),
                   const Text('Connectez-vous pour reprendre votre apprentissage.',
                       textAlign: TextAlign.center,
