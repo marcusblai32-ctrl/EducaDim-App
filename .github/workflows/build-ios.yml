@@ -1,0 +1,66 @@
+name: Build iOS (IPA non signé)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Projet iOS
+        run: |
+          if [ ! -d ios ]; then
+            flutter create --platforms=ios --project-name educadim --org com.dimensionproduction .
+          fi
+          flutter pub get
+          if [ -f test/widget_test.dart ] && grep -q "MyApp" test/widget_test.dart; then rm -f test/widget_test.dart; fi
+          # iOS 13 minimum (webview_flutter, notifications)
+          sed -i '' -E "s/^# platform :ios, .*/platform :ios, '13.0'/" ios/Podfile
+          grep -q "^platform :ios" ios/Podfile || sed -i '' "1i\\
+          platform :ios, '13.0'
+          " ios/Podfile
+          # Nom affiché
+          /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName EducaDim" ios/Runner/Info.plist || true
+          /usr/libexec/PlistBuddy -c "Set :CFBundleName EducaDim" ios/Runner/Info.plist || true
+          # Notifications au premier plan : le centre de notifications doit connaître le délégué
+          python3 - <<'PY'
+          import re
+          p = "ios/Runner/AppDelegate.swift"
+          s = open(p).read()
+          if "UNUserNotificationCenter" not in s:
+              s = s.replace("import Flutter", "import Flutter\nimport UserNotifications", 1)
+              s = re.sub(r"(\n(\s*)return super\.application\(application, didFinishLaunchingWithOptions)",
+                         r"\n\2UNUserNotificationCenter.current().delegate = self\1", s, count=1)
+              open(p, "w").write(s)
+          PY
+
+      - name: Icône
+        run: |
+          python3 -m venv /tmp/venv
+          /tmp/venv/bin/pip install pillow
+          /tmp/venv/bin/python tool/ios_icons.py
+
+      - name: Compilation (sans signature)
+        run: flutter build ios --release --no-codesign
+
+      - name: IPA non signé
+        run: |
+          mkdir -p dist Payload
+          cp -R build/ios/iphoneos/Runner.app Payload/
+          zip -qr dist/EducaDim-unsigned.ipa Payload
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ios-${{ github.run_number }}
+          name: EducaDim iOS #${{ github.run_number }} (non signé)
+          files: dist/EducaDim-unsigned.ipa

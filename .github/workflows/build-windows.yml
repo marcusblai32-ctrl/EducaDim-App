@@ -1,0 +1,78 @@
+name: Build Windows (zip + exe)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Projet Windows (le pubspec.yaml du dépôt n'est jamais modifié)
+        shell: bash
+        run: |
+          flutter config --enable-windows-desktop
+          if [ ! -d windows ]; then
+            flutter create --platforms=windows --project-name educadim --org com.dimensionproduction .
+          fi
+          # SQLite via FFI : fichier propre à Windows + dépendances ajoutées seulement dans ce build
+          cp tool/windows/desktop_init.dart.txt lib/core/platform/desktop_init.dart
+          flutter pub add sqflite_common_ffi sqlite3_flutter_libs || flutter pub add sqflite_common_ffi
+          flutter pub get
+          if [ -f test/widget_test.dart ] && grep -q "MyApp" test/widget_test.dart; then rm -f test/widget_test.dart; fi
+          # Titre et taille de la fenêtre
+          sed -i 's/L"educadim"/L"EducaDim"/' windows/runner/main.cpp
+          sed -i 's/Size size(1280, 720)/Size size(1280, 800)/' windows/runner/main.cpp
+
+      - name: Icône
+        shell: bash
+        run: |
+          pip install pillow
+          python tool/windows_icon.py
+
+      - name: Compilation
+        run: flutter build windows --release
+
+      - name: Bibliothèques nécessaires sur un PC sans Visual C++
+        shell: bash
+        run: |
+          REL="build/windows/x64/runner/Release"
+          for d in msvcp140.dll msvcp140_1.dll msvcp140_2.dll vcruntime140.dll vcruntime140_1.dll concrt140.dll; do
+            cp "/c/Windows/System32/$d" "$REL/" 2>/dev/null || true
+          done
+          if [ ! -f "$REL/sqlite3.dll" ]; then
+            echo "sqlite3.dll absent : téléchargement de la bibliothèque officielle"
+            curl -fsSL -o sqlite.zip https://www.sqlite.org/2024/sqlite-dll-win-x64-3460100.zip
+            unzip -o sqlite.zip sqlite3.dll -d "$REL"
+          fi
+          ls "$REL"
+
+      - name: Zip portable
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Compress-Archive -Path "build\windows\x64\runner\Release\*" -DestinationPath "dist\EducaDim-Windows.zip" -Force
+
+      - name: Installateur .exe (Inno Setup)
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "tool\windows\educadim.iss"
+          Get-ChildItem dist
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: windows-${{ github.run_number }}
+          name: EducaDim Windows #${{ github.run_number }}
+          files: |
+            dist/EducaDim-Windows.zip
+            dist/EducaDim-Setup.exe
