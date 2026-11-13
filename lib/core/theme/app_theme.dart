@@ -77,6 +77,7 @@ class AppTheme {
         titleMedium: head(body.titleMedium, 16, FontWeight.w700),
         titleSmall: head(body.titleSmall, 14, FontWeight.w700),
         bodyMedium: body.bodyMedium?.copyWith(height: 1.45),
+        bodyLarge: body.bodyLarge?.copyWith(height: 1.5),
       ),
       appBarTheme: AppBarTheme(
         backgroundColor: surface,

@@ -461,4 +461,11 @@ const Map<String, String> htStrings = {
   '{b} · Protégé, lisible seulement dans EducaDim': '{b} · Pwoteje, ou ka li l sèlman andedan EducaDim',
   'Ou choisir un abonnement': 'Oswa chwazi yon abonman',
   'tous les cours': 'tout kou yo',
+  'Rien à afficher pour le moment.': 'Pa gen anyen pou montre pou kounye a.',
+  'Ouvrir dans le navigateur': 'Louvri nan navigatè a',
+  'Taille d’origine': 'Gwosè orijinal',
+  'Image indisponible hors ligne.': 'Imaj la pa disponib san entènèt.',
+  'Réduire le texte': 'Fè tèks la pi piti',
+  'Agrandir le texte': 'Fè tèks la pi gwo',
+  'Connexion au serveur à finaliser': 'Koneksyon ak sèvè a poko fini',
 };

@@ -36,7 +36,7 @@ class _PlanScreenState extends State<PlanScreen> {
 
   Future<void> _pickTime() async {
     final t = await showTimePicker(context: context, initialTime: _time);
-    if (t != null) setState(() => _time = t);
+    if (t != null && mounted) setState(() => _time = t);
   }
 
   Future<void> _save() async {
