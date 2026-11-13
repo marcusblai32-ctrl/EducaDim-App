@@ -10,7 +10,6 @@ import '../../core/theme/colors.dart';
 import '../../core/widgets/async_view.dart';
 import '../../core/widgets/common.dart';
 import '../../core/widgets/net_image.dart';
-import '../chat/chat_controller.dart';
 import 'course_repository.dart';
 import 'course_widgets.dart';
 import 'models.dart';
@@ -198,20 +197,8 @@ class _Body extends StatelessWidget {
                       },
               ),
               const SizedBox(height: 10),
-              _Action(Icons.forum_outlined, 'Discussion du cours', 'Échangez avec les autres apprenants',
-                  () async {
-                final msg = ScaffoldMessenger.of(context);
-                final nav = GoRouter.of(context);
-                try {
-                  final id = await context.read<ChatController>().openCourseRoom(c.id);
-                  nav.push('/chat/$id', extra: '${tr('Groupe')} - ${c.titre}');
-                } on ApiException catch (e) {
-                  msg.showSnackBar(snackBarAnimationStyle: AnimationStyle.noAnimation, SnackBar(
-                      content: Text(e.isOffline
-                          ? tr('Connexion requise pour ouvrir la discussion.')
-                          : e.message)));
-                }
-              }),
+              _Action(Icons.mark_email_unread_outlined, 'Messages du professeur', 'Messages, corrections et lien WhatsApp du cours',
+                  () => GoRouter.of(context).push('/messages/${c.id}')),
               if (d.quizzesCount > 0) ...[
                 const SizedBox(height: 10),
                 _Action(Icons.quiz_outlined, 'Quiz', tr('{n} quiz disponible(s)', {'n': d.quizzesCount}),

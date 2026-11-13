@@ -445,4 +445,13 @@ const Map<String, String> htStrings = {
   'Basse': 'Ba',
   'Moyenne': 'Mwayen',
   'Haute': 'Wo',
+  'Messages du professeur': 'Mesaj pwofesè a',
+  'Aucun message pour le moment': 'Poko gen mesaj pou kounye a',
+  'Les messages de vos professeurs apparaîtront ici. Ils se mettent à jour une fois par jour, dès que vous êtes connecté.': 'Mesaj pwofesè ou yo ap parèt la a. Yo mete ajou yon fwa pa jou, le ou konekte.',
+  'Déjà à jour. Réessayez plus tard.': 'Li deja ajou. Re eseye pita.',
+  'étudiants inscrits': 'etidyan enskri',
+  'Groupe WhatsApp du cours': 'Gwoup WhatsApp kou a',
+  'Écrire au professeur': 'Ekri pwofesè a',
+  'Message personnel': 'Mesaj pèsonèl',
+  'Messages, corrections et lien WhatsApp du cours': 'Mesaj, koreksyon ak lyen WhatsApp kou a',
 };

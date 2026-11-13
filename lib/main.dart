@@ -1,4 +1,4 @@
-import 'core/audio/sfx.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -7,20 +7,20 @@ import 'dart:async';
 import 'core/alerts/alert_service.dart';
 import 'core/alerts/background.dart';
 import 'core/db/app_database.dart';
-import 'core/platform/desktop_init.dart';
 import 'core/i18n/lang.dart';
 import 'core/db/cache_store.dart';
 import 'core/db/outbox_repository.dart';
 import 'core/db/user_data_guard.dart';
 import 'core/network/api_client.dart';
 import 'core/storage/token_store.dart';
+import 'core/sync/pulse_service.dart';
 import 'core/sync/sync_gateway.dart';
 import 'core/sync/sync_service.dart';
 import 'core/theme/theme_controller.dart';
 import 'features/admin/admin_repository.dart';
 import 'features/auth/auth_controller.dart';
 import 'features/certificates/certificates_screen.dart';
-import 'features/chat/chat_controller.dart';
+import 'features/comments/comments_service.dart';
 import 'features/courses/course_repository.dart';
 import 'features/courses/offline_course_service.dart';
 import 'features/courses/progress_service.dart';
@@ -34,7 +34,6 @@ Future<void> main() async {
   final prefs = await SharedPreferences.getInstance();
   await Lang.instance.init(prefs);
   await AlertService.instance.init(prefs);
-  await initDesktop(); // Windows : SQLite via FFI (sans effet sur téléphone)
   final db = await AppDatabase.open();
   final cache = CacheStore(db);
   final tokens = TokenStore();
@@ -47,7 +46,7 @@ Future<void> main() async {
   final sync = SyncService(outbox, ApiSyncGateway(api, cache))..currentOwner = () => auth.identity;
 
   final repo = CourseRepository(api, cache);
-  final chat = ChatController(api, db, cache, outbox, sync);
+  final comments = CommentsService(api, prefs);
   final downloads = DownloadService(db)..load();
   final progress = ProgressService(db, outbox, sync, api);
   final offline = OfflineCourseService(db, repo, cache);
@@ -60,15 +59,12 @@ Future<void> main() async {
   sync.onItemRejected = (item) {
     final lesson = item.payload['lesson_id'];
     if (lesson is int) progress.handleRejected(lesson);
-    if (item.kind == 'chat_message') chat.handleRejected(item.id);
   };
 
   bool loggedIn() => auth.status == AuthStatus.authenticated;
+  PulseService? pulse; // créé plus bas, une fois les notifications prêtes
 
-  study.onAward = () {
-    Sfx.success(); // palier de série atteint
-    notifications.refresh(silent: true);
-  };
+  study.onAward = () => notifications.refresh(silent: true);
   sync.afterFlush = () async {
     if (!loggedIn()) return;
     await progress.pull();
@@ -82,7 +78,8 @@ Future<void> main() async {
       await progress.load();
       await offline.load();
       notifications.reset();
-      chat.reset();
+      comments.reset();
+      pulse?.reset();
     }
   };
 
@@ -100,6 +97,7 @@ Future<void> main() async {
     if (loggedIn()) {
       BackgroundAlerts.start();
       AlertService.instance.requestPermission();
+      pulse?.tick();
       adminAccess.load();
       review.load();
       study.ping();
@@ -119,7 +117,17 @@ Future<void> main() async {
     BackgroundAlerts.start();
     AlertService.instance.requestPermission();
   }
-  chat.startPolling(loggedIn);
+  // Notifications lues « au passage » : voir core/sync/pulse_service.dart (aucun sondage répété).
+  pulse = PulseService(
+    api,
+    loggedIn,
+    onNotifications: () => notifications.refresh(silent: true),
+  )..start();
+  api.dio.interceptors.add(InterceptorsWrapper(onResponse: (res, handler) {
+    pulse?.onHeader(res.headers.value('x-notif'));
+    handler.next(res);
+  }));
+  if (loggedIn()) comments.maybeFetch();
   if (loggedIn()) {
     adminAccess.load();
     review.load();
@@ -132,7 +140,7 @@ Future<void> main() async {
       ChangeNotifierProvider(create: (_) => ThemeController(prefs)),
       ChangeNotifierProvider.value(value: auth),
       ChangeNotifierProvider.value(value: sync),
-      ChangeNotifierProvider.value(value: chat),
+      ChangeNotifierProvider.value(value: comments),
       ChangeNotifierProvider.value(value: downloads),
       ChangeNotifierProvider.value(value: progress),
       ChangeNotifierProvider.value(value: offline),

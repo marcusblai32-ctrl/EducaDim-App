@@ -37,8 +37,6 @@ class AppShell extends StatelessWidget {
         if (context.mounted) showReviewSheet(context, reminder: true);
       });
     }
-    // Tablette / ordinateur (Windows, iPad) : rail de navigation à gauche, contenu centré.
-    final wide = MediaQuery.sizeOf(context).width >= EdLayout.wide;
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 16,
@@ -66,42 +64,15 @@ class AppShell extends StatelessWidget {
           const SizedBox(width: 4),
         ],
       ),
-      body: wide
-          ? Row(children: [
-              NavigationRail(
-                selectedIndex: idx,
-                labelType: NavigationRailLabelType.all,
-                minWidth: 92,
-                onDestinationSelected: (i) => context.go(_tabs[i].$1),
-                destinations: [
-                  for (final tab in _tabs)
-                    NavigationRailDestination(
-                      icon: Icon(tab.$3),
-                      selectedIcon: Icon(tab.$4),
-                      label: Text(tab.$2),
-                    ),
-                ],
-              ),
-              VerticalDivider(width: 1, color: t.dividerColor),
-              Expanded(child: ContentWidth(child: child)),
-            ])
-          : child,
-      floatingActionButton: wide
-          ? FloatingActionButton.extended(
-              heroTag: null,
-              tooltip: tr('Discussions'),
-              onPressed: () => context.push('/chat'),
-              icon: const Icon(Icons.chat_bubble_rounded),
-              label: Text('Discussions'),
-            )
-          : FloatingActionButton(
-              heroTag: null,
-              shape: const CircleBorder(),
-              tooltip: tr('Discussions'),
-              onPressed: () => context.push('/chat'),
-              child: const Icon(Icons.chat_bubble_rounded),
-            ),
-      bottomNavigationBar: wide ? null : NavigationBar(
+      body: child,
+      floatingActionButton: FloatingActionButton(
+        heroTag: null,
+        shape: const CircleBorder(),
+        tooltip: tr('Messages du professeur'),
+        onPressed: () => context.push('/messages'),
+        child: const Icon(Icons.mark_email_unread_rounded),
+      ),
+      bottomNavigationBar: NavigationBar(
         selectedIndex: idx,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         onDestinationSelected: (i) => context.go(_tabs[i].$1),

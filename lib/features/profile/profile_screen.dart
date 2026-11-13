@@ -82,7 +82,7 @@ class ProfileScreen extends StatelessWidget {
         _Item(Icons.piano_rounded, 'Pratique musicale (PPI)', () => context.push('/ppi-progress')),
         _Item(Icons.workspace_premium_rounded, 'Mes certificats', () => context.push('/certificates')),
         _Item(Icons.download_for_offline_rounded, 'Téléchargements', () => context.push('/downloads')),
-        _Item(Icons.forum_rounded, 'Discussions', () => context.push('/chat')),
+        _Item(Icons.mark_email_unread_rounded, 'Messages du professeur', () => context.push('/messages')),
       ]),
       const SizedBox(height: 14),
 

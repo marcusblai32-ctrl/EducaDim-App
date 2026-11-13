@@ -73,12 +73,9 @@ class StudyService extends ChangeNotifier {
   void start(bool Function() loggedIn) {
     _loggedIn = loggedIn;
     _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 60), (_) {
-      if (_foreground) _fallbackReminder();
+    _timer = Timer.periodic(const Duration(minutes: 10), (_) {
       if (_foreground && (_loggedIn?.call() ?? false)) ping();
     });
-    // Rappels programmés depuis le plan enregistré sur l'appareil (même sans réseau).
-    if (hasPlan) unawaited(_schedule());
     _lifecycle ??= AppLifecycleListener(
       onResume: () {
         _foreground = true;
@@ -102,20 +99,6 @@ class StudyService extends ChangeNotifier {
     streakLost = false;
     await AlertService.instance.cancelReminders();
     notifyListeners();
-  }
-
-  /// Filet de sécurité : si la programmation système a échoué, l'application ouverte sonne le rappel à l'heure.
-  void _fallbackReminder() {
-    if (!hasPlan || checkedToday || !AlertService.instance.scheduleBroken) return;
-    final now = DateTime.now();
-    if (!weekdays.contains(now.weekday - 1)) return;
-    final at = DateTime(now.year, now.month, now.day, hour, minute);
-    if (now.isBefore(at) || now.isAfter(at.add(const Duration(minutes: 10)))) return;
-    final key = '${now.year}-${now.month}-${now.day}';
-    if (_prefs.getString('study_fb_date') == key) return;
-    _prefs.setString('study_fb_date', key);
-    final t = AlertService.instance.reminderText(streak);
-    AlertService.instance.notify(t[0], t[1], kind: 'reminder');
   }
 
   void dismissLost() {

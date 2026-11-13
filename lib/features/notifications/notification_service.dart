@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/widgets.dart' show WidgetsBinding, AppLifecycleState;
 import '../../core/i18n/lang.dart';
 import '../../core/alerts/alert_service.dart';
 import '../../core/db/cache_store.dart';
@@ -75,11 +74,10 @@ class NotificationService extends ChangeNotifier {
 
   int get unread => items.where((n) => !n.lue).length;
 
+  /// Conservé pour compatibilité : le rafraîchissement périodique est maintenant fait par PulseService
+  /// (un seul appel léger au lieu d'un sondage de la liste complète toutes les 90 s).
   void startPolling(bool Function() isLoggedIn) {
     _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 120), (_) {
-      if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed && isLoggedIn()) refresh(silent: true);
-    });
   }
 
   Future<void> loadCached() async {
