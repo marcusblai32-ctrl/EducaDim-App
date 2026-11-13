@@ -12,6 +12,7 @@ import '../../core/theme/colors.dart';
 import '../../core/widgets/controlled_video.dart';
 import '../../core/widgets/image_viewer.dart';
 import '../../core/widgets/common.dart';
+import '../../core/widgets/text_size.dart';
 import '../downloads/download_service.dart';
 import 'course_repository.dart';
 import 'course_widgets.dart';
@@ -39,8 +40,8 @@ class _LessonScreenState extends State<LessonScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('Leçon')),
+  Widget build(BuildContext context) => TextSizeScope(child: Scaffold(
+        appBar: AppBar(title: const Text('Leçon'), actions: textSizeActions()),
         body: FutureBuilder<Loaded<Lesson>>(
           future: _f,
           builder: (context, snap) {
@@ -76,7 +77,7 @@ class _LessonScreenState extends State<LessonScreen> {
             return _LessonBody(r.value, r.fromCache);
           },
         ),
-      );
+      ));
 }
 
 class _LessonBody extends StatelessWidget {

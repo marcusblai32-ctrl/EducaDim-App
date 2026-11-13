@@ -14,6 +14,7 @@ import '../../core/widgets/controlled_video.dart';
 import '../../core/widgets/image_viewer.dart';
 import '../../core/widgets/async_view.dart';
 import '../../core/widgets/common.dart';
+import '../../core/widgets/text_size.dart';
 import 'course_repository.dart';
 import 'course_widgets.dart';
 import 'models.dart';
@@ -355,10 +356,11 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
         );
         if (leave == true && context.mounted) context.go('/home');
       },
-      child: Scaffold(
+      child: TextSizeScope(child: Scaffold(
         appBar: AppBar(
           title: Text(tr('Question {i} / {n}', {'i': _i + 1, 'n': _qs.length})),
           actions: [
+            ...textSizeActions(),
             Center(
               child: Padding(
                 padding: const EdgeInsets.only(right: 16),
@@ -452,7 +454,7 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
             ),
           ]),
         ]),
-      ),
+      )),
     );
   }
 }
