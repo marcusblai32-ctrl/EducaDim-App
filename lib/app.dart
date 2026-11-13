@@ -22,7 +22,7 @@ import 'features/downloads/downloads_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/notifications/notifications_screen.dart';
 import 'features/profile/profile_screen.dart';
-import 'features/plan/plan_screen.dart';
+import 'features/plan/tasks_screen.dart';
 import 'features/ranking/ppi_progress_screen.dart';
 import 'features/ranking/ranking_screen.dart';
 import 'features/shell/app_shell.dart';
@@ -70,7 +70,7 @@ GoRouter buildRouter(AuthController auth, StudyService study) => GoRouter(
         GoRoute(path: '/ranking', builder: (_, __) => const RankingScreen()),
         GoRoute(path: '/badges', builder: (_, __) => const BadgesScreen()),
         GoRoute(path: '/ppi-progress', builder: (_, __) => const PpiProgressScreen()),
-        GoRoute(path: '/plan', builder: (_, __) => const PlanScreen()),
+        GoRoute(path: '/tasks', builder: (_, __) => const TasksScreen()),
         GoRoute(path: '/admin', builder: (_, __) => const AdminHomeScreen()),
         GoRoute(path: '/admin/course/new', builder: (_, __) => const AdminCourseFormScreen()),
         GoRoute(

@@ -76,7 +76,7 @@ class ProfileScreen extends StatelessWidget {
         _Item(Icons.local_fire_department_rounded, 'Mon rythme d’étude', () => context.push('/study/plan'),
             subtitle: study.hasPlan ? tr('{n} jour(s) par semaine', {'n': study.weekdays.length}) : null),
         _Item(Icons.leaderboard_rounded, 'Classement des séries', () => context.push('/leaderboard')),
-        _Item(Icons.checklist_rounded, 'Mon plan d’étude', () => context.push('/plan')),
+        _Item(Icons.checklist_rounded, 'Mes tâches d’étude', () => context.push('/tasks')),
         _Item(Icons.emoji_events_rounded, 'Classement par points', () => context.push('/ranking')),
         _Item(Icons.military_tech_rounded, 'Mes badges', () => context.push('/badges')),
         _Item(Icons.piano_rounded, 'Pratique musicale (PPI)', () => context.push('/ppi-progress')),

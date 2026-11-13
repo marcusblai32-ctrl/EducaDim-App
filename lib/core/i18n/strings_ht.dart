@@ -430,7 +430,7 @@ const Map<String, String> htStrings = {
   'Énoncé de la question': 'Anons kesyon an',
   'Évaluation': 'Evalyasyon',
   '← Retour au programme': '← Retounen nan pwogram nan',
-  'Mon plan d’étude': 'Plan etid mwen',
+  'Mes tâches d’étude': 'Tâche etid mwen yo',
   'Votre plan est vide': 'Plan ou an vid',
   'Ajoutez une tâche, ou inscrivez-vous à un cours : une tâche « Terminer le cours » sera ajoutée pour vous.': 'Ajoute yon tâche, oswa enskri nan yon kou : n ap ajoute yon tâche « Fini kou a » pou ou.',
   'En retard': 'An reta',
