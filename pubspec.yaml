@@ -13,6 +13,8 @@ dependencies:
     sdk: flutter
   dio: ^5.4.3
   flutter_secure_storage: ^9.2.2
+  cryptography: ^2.7.0
+  pdfx: ^2.9.1
   sqflite: ^2.3.3
   path: ^1.9.0
   path_provider: ^2.1.3

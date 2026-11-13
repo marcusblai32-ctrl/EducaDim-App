@@ -13,6 +13,7 @@ import '../../core/widgets/controlled_video.dart';
 import '../../core/widgets/image_viewer.dart';
 import '../../core/widgets/common.dart';
 import '../../core/widgets/text_size.dart';
+import '../../core/security/offline_access.dart';
 import '../downloads/download_service.dart';
 import 'course_repository.dart';
 import 'course_widgets.dart';
@@ -105,7 +106,7 @@ class _LessonBody extends StatelessWidget {
                 child: SelectableText(l.contenu, style: const TextStyle(height: 1.6)))),
       ],
       if (l.sections.isNotEmpty) const SizedBox(height: 16),
-      for (final s in l.sections) _SectionTile(s),
+      for (final s in l.sections) _SectionTile(s, l.courseId),
       if (l.sections.isEmpty && l.contenu.trim().isEmpty)
         const SizedBox(
             height: 220,
@@ -138,8 +139,9 @@ class _LessonBody extends StatelessWidget {
 
 /// Section dépliable sur place (sans animation) : un clic ouvre / referme les contenus.
 class _SectionTile extends StatefulWidget {
-  const _SectionTile(this.s);
+  const _SectionTile(this.s, this.courseId);
   final LessonSection s;
+  final int courseId;
   @override
   State<_SectionTile> createState() => _SectionTileState();
 }
@@ -175,7 +177,7 @@ class _SectionTileState extends State<_SectionTile> {
             child: s.contenus.isEmpty
                 ? Text(tr('Aucun contenu dans cette section.'))
                 : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    for (final c in s.contenus) _ContentTile(c),
+                    for (final c in s.contenus) _ContentTile(c, widget.courseId),
                   ]),
           ),
       ]),
@@ -184,8 +186,9 @@ class _SectionTileState extends State<_SectionTile> {
 }
 
 class _ContentTile extends StatelessWidget {
-  const _ContentTile(this.c);
+  const _ContentTile(this.c, this.courseId);
   final LessonContent c;
+  final int courseId;
 
   static const _labels = {
     'video': 'Vidéo',
@@ -234,7 +237,7 @@ class _ContentTile extends StatelessWidget {
         ]),
       );
     }
-    final downloadable = c.type == 'pdf' || c.type == 'audio' || c.type == 'fichier';
+    final downloadable = c.type == 'pdf'; // seuls les PDF sont téléchargés (chiffrés) ; audio et autres fichiers : en ligne
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 5),
       child: ListTile(
@@ -249,9 +252,10 @@ class _ContentTile extends StatelessWidget {
               onPressed: () async {
                 final msg = ScaffoldMessenger.of(context);
                 try {
-                  await context
-                      .read<DownloadService>()
-                      .download('content-${c.id}', c.titre ?? _labels[c.type]!, url);
+                  final until = await context.read<OfflineAccess>().fetchUntil(courseId);
+                  if (!context.mounted) return;
+                  await context.read<DownloadService>().download('content-${c.id}', c.titre ?? _labels[c.type]!, url,
+                      courseId: courseId, accessUntil: until);
                   msg.showSnackBar(snackBarAnimationStyle: AnimationStyle.noAnimation, const SnackBar(content: Text('Téléchargé pour le hors ligne.')));
                 } catch (_) {
                   msg.showSnackBar(snackBarAnimationStyle: AnimationStyle.noAnimation, 

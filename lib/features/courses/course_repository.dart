@@ -11,6 +11,9 @@ class CourseRepository {
   final ApiClient _api;
   final CacheStore _cache;
 
+  /// Vrai = le contenu en cache de cette clé est bloqué (abonnement expiré) : illisible même hors ligne.
+  bool Function(String cacheKey)? cacheBlocked;
+
   Future<Loaded<T>> _get<T>(
     String path,
     String cacheKey,
@@ -24,7 +27,7 @@ class CourseRepository {
     } on DioException catch (e) {
       final ex = mapDio(e);
       if (ex.isOffline) {
-        final cached = await _cache.get(cacheKey);
+        final cached = (cacheBlocked?.call(cacheKey) ?? false) ? null : await _cache.get(cacheKey);
         if (cached != null) return Loaded(parse(cached), fromCache: true);
       }
       throw ex;

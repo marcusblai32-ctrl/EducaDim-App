@@ -21,6 +21,7 @@ import 'features/admin/admin_repository.dart';
 import 'features/auth/auth_controller.dart';
 import 'features/certificates/certificates_screen.dart';
 import 'features/comments/comments_service.dart';
+import 'core/security/offline_access.dart';
 import 'features/courses/course_repository.dart';
 import 'features/courses/offline_course_service.dart';
 import 'features/courses/progress_service.dart';
@@ -50,6 +51,15 @@ Future<void> main() async {
   final downloads = DownloadService(db)..load();
   final progress = ProgressService(db, outbox, sync, api);
   final offline = OfflineCourseService(db, repo, cache);
+  final access = OfflineAccess(db, api, prefs);
+  repo.cacheBlocked = access.blocks;
+  offline.accessUntilFor = access.fetchUntil;
+  access
+    ..cacheKeysFor = offline.cacheKeysFor
+    ..purgeCourse = (id) async {
+      await offline.remove(id);
+      await downloads.removeByCourse(id);
+    };
   final notifications = NotificationService(api, cache, outbox, sync);
   final adminAccess = AdminAccess(api, cache);
   final review = ReviewService(api);
@@ -79,6 +89,8 @@ Future<void> main() async {
       await offline.load();
       notifications.reset();
       comments.reset();
+      await downloads.purgeAll();
+      access.reset();
       pulse?.reset();
     }
   };
@@ -128,6 +140,12 @@ Future<void> main() async {
     handler.next(res);
   }));
   if (loggedIn()) comments.maybeFetch();
+  await access.sweep();
+  if (loggedIn()) access.refreshIfDue();
+  AppLifecycleListener(onResume: () {
+    access.sweep();
+    if (loggedIn()) access.refreshIfDue();
+  });
   if (loggedIn()) {
     adminAccess.load();
     review.load();
@@ -141,6 +159,7 @@ Future<void> main() async {
       ChangeNotifierProvider.value(value: auth),
       ChangeNotifierProvider.value(value: sync),
       ChangeNotifierProvider.value(value: comments),
+      ChangeNotifierProvider.value(value: access),
       ChangeNotifierProvider.value(value: downloads),
       ChangeNotifierProvider.value(value: progress),
       ChangeNotifierProvider.value(value: offline),

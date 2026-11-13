@@ -10,7 +10,7 @@ class AppDatabase {
   AppDatabase(this.db);
   final Database db;
 
-  static const int version = 3;
+  static const int version = 4;
 
   static Future<AppDatabase> open({String? path, DatabaseFactory? factory}) async {
     final f = factory ?? databaseFactory;
@@ -28,6 +28,7 @@ class AppDatabase {
     if (from < 3) {
       await d.execute('ALTER TABLE chat_messages ADD COLUMN room_id INTEGER');
     }
+    if (from < 4) await _addAccessColumns(d);
   }
 
   static Future<void> _createV2(Database d) async {
@@ -88,6 +89,20 @@ class AppDatabase {
         created_at INTEGER NOT NULL
       )''');
     await _createV2(d);
+    await _addAccessColumns(d);
+  }
+
+  /// v4 : fin d'accès (abonnement) des contenus téléchargés + cours d'origine des fichiers.
+  static Future<void> _addAccessColumns(Database d) async {
+    for (final sql in [
+      'ALTER TABLE offline_courses ADD COLUMN access_until INTEGER',
+      'ALTER TABLE downloads ADD COLUMN course_id INTEGER',
+      'ALTER TABLE downloads ADD COLUMN access_until INTEGER',
+    ]) {
+      try {
+        await d.execute(sql);
+      } catch (_) {} // colonne déjà présente
+    }
   }
 
   Future<void> close() => db.close();

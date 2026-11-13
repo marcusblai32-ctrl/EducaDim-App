@@ -454,4 +454,9 @@ const Map<String, String> htStrings = {
   'Écrire au professeur': 'Ekri pwofesè a',
   'Message personnel': 'Mesaj pèsonèl',
   'Messages, corrections et lien WhatsApp du cours': 'Mesaj, koreksyon ak lyen WhatsApp kou a',
+  'Votre accès à ce cours a expiré. Renouvelez votre abonnement pour le relire.': 'Aksè ou nan kou sa a fini. Renouvle abònman ou pou w ka li l ankò.',
+  'Ce document n’est plus disponible sur cet appareil.': 'Dokiman sa a pa disponib sou aparèy sa a ankò.',
+  'Document': 'Dokiman',
+  'Accès expiré. Renouvelez votre abonnement dans les 3 jours, sinon ce cours sera supprimé de cet appareil.': 'Aksè a fini. Renouvle abònman ou nan 3 jou, sinon kou sa a ap efase sou aparèy sa a.',
+  '{b} · Protégé, lisible seulement dans EducaDim': '{b} · Pwoteje, ou ka li l sèlman andedan EducaDim',
 };

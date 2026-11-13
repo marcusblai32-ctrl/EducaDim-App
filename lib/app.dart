@@ -10,6 +10,7 @@ import 'features/auth/login_screen.dart';
 import 'features/admin/admin_screens.dart';
 import 'features/certificates/certificates_screen.dart';
 import 'features/comments/messages_screen.dart';
+import 'features/downloads/secure_pdf_screen.dart';
 import 'features/courses/course_detail_screen.dart';
 import 'features/courses/explore_screen.dart';
 import 'features/courses/flashcards_screen.dart';
@@ -60,6 +61,10 @@ GoRouter buildRouter(AuthController auth, StudyService study) => GoRouter(
         GoRoute(path: '/downloads', builder: (_, __) => const DownloadsScreen()),
         GoRoute(path: '/notifications', builder: (_, __) => const NotificationsScreen()),
         GoRoute(path: '/progress', builder: (_, __) => const ProgressScreen()),
+        GoRoute(
+          path: '/secure-pdf/:id',
+          builder: (_, st) => SecurePdfScreen(st.pathParameters['id']!, title: st.extra is String ? st.extra as String : null),
+        ),
         GoRoute(path: '/messages', builder: (_, __) => const MessagesScreen()),
         GoRoute(
           path: '/messages/:id',

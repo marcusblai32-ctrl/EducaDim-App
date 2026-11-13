@@ -65,13 +65,6 @@ class AppShell extends StatelessWidget {
         ],
       ),
       body: child,
-      floatingActionButton: FloatingActionButton(
-        heroTag: null,
-        shape: const CircleBorder(),
-        tooltip: tr('Messages du professeur'),
-        onPressed: () => context.push('/messages'),
-        child: const Icon(Icons.mark_email_unread_rounded),
-      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: idx,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,

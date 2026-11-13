@@ -19,6 +19,9 @@ class OfflineCourse {
 /// d'endpoint `manifest` / URL signées (voir docs/API_CONTRACT.md).
 class OfflineCourseService extends ChangeNotifier {
   OfflineCourseService(this._db, this._repo, this._cache);
+
+  /// Lit la date de fin d'accès du cours (null = sans fin). Fourni par OfflineAccess.
+  Future<int?> Function(int courseId)? accessUntilFor;
   final AppDatabase _db;
   final CourseRepository _repo;
   final CacheStore _cache;
@@ -49,6 +52,7 @@ class OfflineCourseService extends ChangeNotifier {
     progressDone = 0;
     notifyListeners();
     try {
+      final until = accessUntilFor == null ? null : await accessUntilFor!(courseId);
       await _repo.detail(courseId);
       final cur = await _repo.curriculum(courseId);
       final lessons = cur.value.allLessons;
@@ -79,8 +83,8 @@ class OfflineCourseService extends ChangeNotifier {
         }
       } catch (_) {} // endpoint absent ou cours sans quiz
       await _db.db.rawInsert(
-        'INSERT OR REPLACE INTO offline_courses(course_id,title,lessons,skipped,created_at) VALUES(?,?,?,?,?)',
-        [courseId, title, lessons.length - skipped, skipped, DateTime.now().millisecondsSinceEpoch],
+        'INSERT OR REPLACE INTO offline_courses(course_id,title,lessons,skipped,created_at,access_until) VALUES(?,?,?,?,?,?)',
+        [courseId, title, lessons.length - skipped, skipped, DateTime.now().millisecondsSinceEpoch, until],
       );
       await load();
     } finally {
@@ -89,29 +93,39 @@ class OfflineCourseService extends ChangeNotifier {
     }
   }
 
-  Future<void> remove(int courseId) async {
+  /// Toutes les clés de cache d'un cours (pour le bloquer ou le supprimer).
+  Future<List<String>> cacheKeysFor(int courseId) async {
+    final keys = <String>['course:$courseId', 'curriculum:$courseId', 'flashcards:$courseId', 'quizzes:$courseId'];
     final cur = await _cache.get('curriculum:$courseId');
     if (cur != null) {
       try {
         for (final l in (await _repo.curriculumFromJson(cur)).allLessons) {
-          await _cache.delete('lesson:${l.id}');
+          keys.add('lesson:${l.id}');
         }
       } catch (_) {}
     }
     final fcCached = await _cache.get('flashcards:$courseId');
     if (fcCached != null) {
-      for (final m in CourseFlashcards.fromJson(fcCached).modules) {
-        await _cache.delete('flashcards:module:${m.moduleId}');
-      }
+      try {
+        for (final m in CourseFlashcards.fromJson(fcCached).modules) {
+          keys.add('flashcards:module:${m.moduleId}');
+        }
+      } catch (_) {}
     }
-    await _cache.delete('flashcards:$courseId');
     final qc = await _cache.get('quizzes:$courseId');
     if (qc != null) {
-      for (final q in QuizSummary.listFromJson(qc)) {
-        await _cache.delete('quiz:${q.id}');
-        await _cache.delete('quiz:offline:${q.id}');
-      }
-      await _cache.delete('quizzes:$courseId');
+      try {
+        for (final q in QuizSummary.listFromJson(qc)) {
+          keys.add('quiz:${q.id}');
+        }
+      } catch (_) {}
+    }
+    return keys;
+  }
+
+  Future<void> remove(int courseId) async {
+    for (final k in await cacheKeysFor(courseId)) {
+      await _cache.delete(k);
     }
     await _db.db.delete('offline_courses', where: 'course_id = ?', whereArgs: [courseId]);
     await load();

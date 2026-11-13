@@ -2,7 +2,7 @@ import 'package:flutter/material.dart' hide Text;
 import '../../core/i18n/text.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import 'package:open_filex/open_filex.dart';
+import '../../core/security/offline_access.dart';
 import '../../core/widgets/common.dart';
 import '../courses/offline_course_service.dart';
 import 'download_service.dart';
@@ -30,6 +30,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
   Widget build(BuildContext context) {
     final s = context.watch<DownloadService>();
     final oc = context.watch<OfflineCourseService>();
+    final ac = context.watch<OfflineAccess>();
     return Scaffold(
       appBar: AppBar(title: const Text('Téléchargements')),
       body: (s.items.isEmpty && oc.courses.isEmpty)
@@ -59,9 +60,11 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                   for (final c in oc.courses)
                     Card(
                       child: ListTile(
-                        leading: const Icon(Icons.menu_book_outlined),
+                        leading: Icon(ac.isLocked(c.courseId) ? Icons.lock_outline : Icons.menu_book_outlined),
                         title: Text(c.title),
-                        subtitle: Text(c.skipped > 0
+                        subtitle: Text(ac.isLocked(c.courseId)
+                            ? tr('Accès expiré. Renouvelez votre abonnement dans les 3 jours, sinon ce cours sera supprimé de cet appareil.')
+                            : c.skipped > 0
                             ? tr('{n} leçon(s) lisible(s) hors ligne · {k} verrouillée(s) par un quiz', {'n': c.lessons, 'k': c.skipped})
                             : tr('{n} leçon(s) lisible(s) hors ligne', {'n': c.lessons})),
                         onTap: () => context.push('/course/${c.courseId}'),
@@ -79,16 +82,10 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                 for (final d in s.items)
                   Card(
                     child: ListTile(
-                      leading: const Icon(Icons.offline_pin_outlined),
+                      leading: Icon(d.courseId != null && ac.isLocked(d.courseId!) ? Icons.lock_outline : Icons.offline_pin_outlined),
                       title: Text(d.title),
-                      subtitle: Text(tr('{b} · Touchez pour ouvrir', {'b': formatBytes(d.bytes)})),
-                      onTap: () async {
-                        final r = await OpenFilex.open(d.path);
-                        if (r.type != ResultType.done && context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(snackBarAnimationStyle: AnimationStyle.noAnimation, const SnackBar(
-                              content: Text('Aucune application disponible pour ouvrir ce fichier.')));
-                        }
-                      },
+                      subtitle: Text(tr('{b} · Protégé, lisible seulement dans EducaDim', {'b': formatBytes(d.bytes)})),
+                      onTap: () => context.push('/secure-pdf/${d.id}', extra: d.title),
                       trailing: IconButton(
                         tooltip: tr('Supprimer'),
                         icon: const Icon(Icons.delete_outline),
