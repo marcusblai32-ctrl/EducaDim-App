@@ -89,6 +89,30 @@ class CourseRepository {
   Future<Loaded<QuizDetail>> quiz(int id) =>
       _get('quizzes/$id/', 'quiz:$id', QuizDetail.fromJson);
 
+  /// Paquet hors ligne : quiz + bonnes réponses + explications (pour corriger sans réseau).
+  Future<QuizDetail> downloadQuizPack(int id) async {
+    try {
+      final res = await _api.dio.get('quizzes/$id/offline/');
+      await _cache.put('quiz:offline:$id', res.data);
+      await _cache.put('quiz:$id', res.data); // l'écran d'intro lit aussi ce cache
+      return QuizDetail.fromJson(res.data);
+    } on DioException catch (e) {
+      throw mapDio(e);
+    }
+  }
+
+  Future<QuizDetail?> cachedQuizPack(int id) async {
+    final c = await _cache.get('quiz:offline:$id');
+    if (c == null) return null;
+    final q = QuizDetail.fromJson(c);
+    return q.gradable ? q : null;
+  }
+
+  Future<void> removeQuizPack(int id) => _cache.delete('quiz:offline:$id');
+
+  /// Mémorise localement le résultat d'une tentative faite hors ligne.
+  Future<void> saveLocalResult(QuizResult r) => _cache.put('quiz:attempt:${r.attemptId}', r.toJson());
+
   /// Démarre ou reprend une tentative (en ligne obligatoire).
   Future<QuizAttempt> startQuiz(int quizId) async {
     try {
@@ -111,7 +135,17 @@ class CourseRepository {
     }
   }
 
-  Future<Loaded<QuizResult>> quizResult(int attemptId) =>
+  Future<Loaded<QuizResult>> quizResult(int attemptId) async {
+    if (attemptId < 0) {
+      // tentative locale (hors ligne) : résultat stocké sur l'appareil, puis remplacé après synchro
+      final c = await _cache.get('quiz:attempt:$attemptId');
+      if (c != null) return Loaded(QuizResult.fromJson(c));
+      throw ApiException('Résultat introuvable.');
+    }
+    return _quizResultNet(attemptId);
+  }
+
+  Future<Loaded<QuizResult>> _quizResultNet(int attemptId) =>
       _get('quiz-attempts/$attemptId/', 'quiz:attempt:$attemptId', QuizResult.fromJson);
 
   Future<Loaded<Lesson>> lesson(int id) =>

@@ -10,7 +10,7 @@ import '../../core/config/api_config.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/theme/colors.dart';
 import '../../core/widgets/controlled_video.dart';
-import '../../core/widgets/net_image.dart';
+import '../../core/widgets/image_viewer.dart';
 import '../../core/widgets/common.dart';
 import '../downloads/download_service.dart';
 import 'course_repository.dart';
@@ -218,10 +218,7 @@ class _ContentTile extends StatelessWidget {
     if (c.type == 'image' && url != null) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 6),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: NetImage(url, aspectRatio: null, fit: BoxFit.fitWidth),
-        ),
+        child: ZoomableNetImage(url, title: c.titre),
       );
     }
     if (c.type == 'video' && url != null) {

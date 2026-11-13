@@ -163,8 +163,7 @@ class _Body extends StatelessWidget {
                       )
                     else
                       FilledButton(
-                        onPressed: () => launchUrl(Uri.parse('${ApiConfig.siteUrl}/fr/cours/${c.id}/'),
-                            mode: LaunchMode.externalApplication),
+                        onPressed: () => _openSite(context, '${ApiConfig.siteUrl}/fr/inscriptions/enroll/${c.id}/'),
                         child: const Text('S’inscrire et payer sur le site'),
                       ),
                   ]),
@@ -350,4 +349,21 @@ class _CurriculumCardState extends State<_CurriculumCard> {
       ),
     );
   }
+}
+
+
+/// Ouvre une page du site : navigateur externe, puis navigateur intégré, puis défaut.
+/// Si rien ne marche, affiche le lien (copiable) au lieu de ne rien faire.
+Future<void> _openSite(BuildContext context, String url) async {
+  final msg = ScaffoldMessenger.of(context);
+  final uri = Uri.parse(url);
+  for (final mode in [LaunchMode.externalApplication, LaunchMode.inAppBrowserView, LaunchMode.platformDefault]) {
+    try {
+      if (await launchUrl(uri, mode: mode)) return;
+    } catch (_) {}
+  }
+  msg.showSnackBar(SnackBar(
+    duration: const Duration(seconds: 8),
+    content: Text('Impossible d’ouvrir le navigateur. Ouvre ce lien : $url'),
+  ));
 }

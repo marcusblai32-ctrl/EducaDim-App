@@ -73,6 +73,9 @@ class OfflineCourseService extends ChangeNotifier {
         final qs = await _repo.quizzes(courseId);
         for (final q in qs.value.where((q) => q.compatible)) {
           await _repo.quiz(q.id);
+          try {
+            await _repo.downloadQuizPack(q.id); // bonnes réponses : correction hors ligne
+          } catch (_) {}
         }
       } catch (_) {} // endpoint absent ou cours sans quiz
       await _db.db.rawInsert(
@@ -106,6 +109,7 @@ class OfflineCourseService extends ChangeNotifier {
     if (qc != null) {
       for (final q in QuizSummary.listFromJson(qc)) {
         await _cache.delete('quiz:${q.id}');
+        await _cache.delete('quiz:offline:${q.id}');
       }
       await _cache.delete('quizzes:$courseId');
     }

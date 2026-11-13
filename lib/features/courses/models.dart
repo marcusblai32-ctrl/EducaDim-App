@@ -351,16 +351,18 @@ class QuizSummary {
 }
 
 class QuizChoice {
-  QuizChoice(this.id, this.texte);
+  QuizChoice(this.id, this.texte, [this.correct]);
   final int id;
   final String texte;
+  final bool? correct; // renseigné seulement dans le paquet hors ligne
 }
 
 class QuizQuestion {
   QuizQuestion(this.id, this.type, this.supported, this.texte, this.points, this.image,
-      this.audio, this.video, this.mediaTexte, this.choices);
+      this.audio, this.video, this.mediaTexte, this.choices, [this.explication, this.accepte]);
   final int id, points;
   final String type, texte;
+  final String? explication, accepte; // paquet hors ligne uniquement
   final bool supported;
   final String? image, audio, video, mediaTexte;
   final List<QuizChoice> choices;
@@ -377,6 +379,33 @@ class QuizDetail {
   final String titre, description;
   final bool compatible;
   final List<QuizQuestion> questions;
+
+  /// Paquet hors ligne : toutes les questions à choix portent leurs bonnes réponses.
+  bool get gradable => questions.isNotEmpty && questions.every((q) =>
+      !q.supported || (q.isChoice ? q.choices.any((c) => c.correct != null) : q.type != 'texte_trous' || q.accepte != null));
+
+  /// Correction locale (même règle que le serveur : tout ou rien par question).
+  QuizResult gradeLocally(int attemptId, Map<int, Set<int>> ids, Map<int, String> texts) {
+    var total = 0, got = 0;
+    final details = <QuestionResult>[];
+    for (final q in questions.where((q) => q.supported)) {
+      total += q.points;
+      bool? ok;
+      if (q.isChoice) {
+        final good = q.choices.where((c) => c.correct == true).map((c) => c.id).toSet();
+        final chosen = ids[q.id] ?? <int>{};
+        ok = good.isNotEmpty && good.length == chosen.length && good.containsAll(chosen);
+      } else if (q.type == 'texte_trous') {
+        ok = q.accepte != null && (texts[q.id] ?? '').trim().toLowerCase() == q.accepte!.trim().toLowerCase();
+      } else {
+        ok = null; // texte libre : correction manuelle
+      }
+      if (ok == true) got += q.points;
+      details.add(QuestionResult(q.id, ok, q.explication));
+    }
+    final pct = total > 0 ? got * 100.0 / total : 0.0;
+    return QuizResult(attemptId, id, true, pct, pct >= passPct, passPct, details);
+  }
 
   factory QuizDetail.fromJson(dynamic j) {
     final m = _m(j);
@@ -402,8 +431,11 @@ class QuizDetail {
           _s(media, 'video'),
           _s(media, 'texte'),
           _l(qm['reponses'])
-              .map((r) => QuizChoice(_i(_m(r), 'id') ?? 0, _s(_m(r), 'texte') ?? ''))
+              .map((r) => QuizChoice(_i(_m(r), 'id') ?? 0, _s(_m(r), 'texte') ?? '',
+                  _m(r)['est_correcte'] is bool ? _m(r)['est_correcte'] as bool : null))
               .toList(),
+          _s(qm, 'explication'),
+          _s(qm, 'accepte'),
         );
       }).toList(),
     );
@@ -411,9 +443,10 @@ class QuizDetail {
 }
 
 class QuizAttempt {
-  QuizAttempt(this.attemptId, this.quizId, this.expiresAt, this.resumed);
+  QuizAttempt(this.attemptId, this.quizId, this.expiresAt, this.resumed, [this.startedAt]);
   final int attemptId, quizId;
   final DateTime? expiresAt;
+  final DateTime? startedAt; // tentative locale (hors ligne)
   final bool resumed;
   factory QuizAttempt.fromJson(dynamic j) {
     final m = _m(j);
@@ -430,6 +463,20 @@ class QuestionResult {
 }
 
 class QuizResult {
+  Map<String, dynamic> toJson() => {
+        'attempt_id': attemptId,
+        'quiz_id': quizId,
+        'submitted': submitted,
+        'score': score,
+        'reussi': reussi,
+        'pourcentage_reussite': passPct,
+        'details': [
+          for (final d in details)
+            {'question_id': d.questionId, 'correct': d.correct, 'explication': d.explication}
+        ],
+        'local': true,
+      };
+
   QuizResult(this.attemptId, this.quizId, this.submitted, this.score, this.reussi,
       this.passPct, this.details);
   final int attemptId, quizId, passPct;

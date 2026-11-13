@@ -34,6 +34,7 @@ class UnconfiguredGateway implements SyncGateway {
 ///  - lesson_completed  -> POST lessons/<id>/complete/ (idempotent côté serveur)
 ///  - notification_read -> POST notifications/<id>/read/ (idempotent)
 ///  - quiz_submit       -> POST quiz-attempts/<id>/submit/ (idempotent, résultat mis en cache)
+///  - quiz_offline_submit -> POST quizzes/<id>/offline-submit/ (quiz passé hors ligne, recorrigé par le serveur)
 ///  - chat_message      -> POST chat/rooms/<room_id>/messages/ (idempotent via client_id)
 class ApiSyncGateway implements SyncGateway {
   ApiSyncGateway(this._api, [this._cache]);
@@ -85,6 +86,15 @@ class ApiSyncGateway implements SyncGateway {
           'quiz-attempts/$id/submit/',
           {'answers': item.payload['answers'] ?? const []},
           (data) async => _cache?.put('quiz:attempt:$id', data),
+        );
+      case 'quiz_offline_submit':
+        final qid = item.payload['quiz_id'];
+        final local = item.payload['local_id'];
+        if (qid is! int || local is! int) return Future.value(PushOutcome.rejected);
+        return _post(
+          'quizzes/$qid/offline-submit/',
+          {'started_at': item.payload['started_at'], 'answers': item.payload['answers'] ?? const []},
+          (data) async => _cache?.put('quiz:attempt:$local', data),
         );
       default:
         return Future.value(PushOutcome.unavailable);

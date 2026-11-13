@@ -41,6 +41,10 @@ s=s.replace('</application>',recv+'</application>',1)
 open(p,'w').write(s)
 PY
 fi
+# Android 11+ : autorise l'ouverture de liens web / PPI (visibilité des paquets)
+if ! grep -q "<queries>" "$M"; then
+  sed -i 's#<application#<queries><intent><action android:name="android.intent.action.VIEW"/><data android:scheme="https"/></intent><intent><action android:name="android.intent.action.VIEW"/><data android:scheme="http"/></intent><intent><action android:name="android.intent.action.VIEW"/><data android:scheme="ppi"/></intent></queries>\n    <application#' "$M"
+fi
 sed -i 's#android:label="[^"]*"#android:label="EducaDim"#' "$M"
 grep -q 'android.permission.INTERNET' "$M" || { echo "ERREUR: permission INTERNET absente"; exit 1; }
 

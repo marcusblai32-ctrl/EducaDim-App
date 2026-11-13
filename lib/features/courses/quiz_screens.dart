@@ -11,7 +11,7 @@ import '../../core/network/api_exception.dart';
 import '../../core/sync/sync_service.dart';
 import '../../core/theme/colors.dart';
 import '../../core/widgets/controlled_video.dart';
-import '../../core/widgets/net_image.dart';
+import '../../core/widgets/image_viewer.dart';
 import '../../core/widgets/async_view.dart';
 import '../../core/widgets/common.dart';
 import 'course_repository.dart';
@@ -105,9 +105,20 @@ class _QuizIntroScreenState extends State<QuizIntroScreen> {
       final attempt = await context.read<CourseRepository>().startQuiz(quiz.id);
       if (mounted) context.pushReplacement('/quiz/${quiz.id}/take', extra: QuizRun(quiz, attempt));
     } on ApiException catch (e) {
+      if (e.isOffline) {
+        // Hors ligne : si le quiz est téléchargé (avec ses bonnes réponses), on le passe localement.
+        final pack = await context.read<CourseRepository>().cachedQuizPack(quiz.id);
+        if (pack != null && mounted) {
+          final now = DateTime.now();
+          final local = QuizAttempt(-(now.millisecondsSinceEpoch ~/ 1000), quiz.id,
+              now.add(Duration(minutes: pack.duree)), false, now);
+          context.pushReplacement('/quiz/${quiz.id}/take', extra: QuizRun(pack, local));
+          return;
+        }
+      }
       msg.showSnackBar(snackBarAnimationStyle: AnimationStyle.noAnimation, SnackBar(
           content: Text(e.isOffline
-              ? 'Connexion requise pour démarrer le quiz (une seule fois). Réessayez en ligne.'
+              ? 'Téléchargez d’abord ce cours (bouton « Télécharger le cours ») pour passer le quiz sans connexion.'
               : e.message)));
     } finally {
       if (mounted) setState(() => _starting = false);
@@ -143,8 +154,9 @@ class _QuizIntroScreenState extends State<QuizIntroScreen> {
             ],
             const SizedBox(height: 12),
             const Text(
-                'Le chronomètre démarre dès que vous commencez. Vous pouvez terminer le quiz '
-                'hors ligne : vos réponses seront envoyées automatiquement au retour de la connexion.',
+                'Le chronomètre démarre dès que vous commencez. Si le cours est téléchargé, le quiz '
+                'fonctionne sans connexion : il est corrigé tout de suite sur votre téléphone, '
+                'puis synchronisé automatiquement au retour du réseau.',
                 style: TextStyle(height: 1.5)),
             const SizedBox(height: 18),
             if (!q.compatible)
@@ -271,6 +283,25 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
     final sync = context.read<SyncService>();
     final msg = ScaffoldMessenger.of(context);
     final attemptId = widget.run.attempt.attemptId;
+    if (attemptId < 0) {
+      // Tentative locale : correction immédiate sur l'appareil, envoi différé.
+      final res = widget.run.quiz.gradeLocally(attemptId,
+          {for (final q in _qs) q.id: _a(q).ids}, {for (final q in _qs) q.id: _a(q).text});
+      await repo.saveLocalResult(res);
+      await outbox.enqueue(
+        'quiz_offline_submit',
+        {
+          'local_id': attemptId,
+          'quiz_id': widget.run.quiz.id,
+          'started_at': (widget.run.attempt.startedAt ?? DateTime.now()).toUtc().toIso8601String(),
+          'answers': answers,
+        },
+        id: 'quiz-offline-$attemptId',
+      );
+      await sync.refreshCount();
+      if (mounted) context.pushReplacement('/quiz-result/$attemptId');
+      return;
+    }
     try {
       await repo.submitQuiz(attemptId, answers);
     } on ApiException catch (e) {
@@ -349,10 +380,7 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
           if (q.image != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: NetImage(q.image, aspectRatio: null, fit: BoxFit.fitWidth),
-              ),
+              child: ZoomableNetImage(q.image),
             ),
           if (q.mediaTexte != null)
             Padding(
@@ -432,11 +460,12 @@ class _QuizTakeScreenState extends State<QuizTakeScreen> {
 // ======================= Résultat =======================
 
 class _ResultData {
-  _ResultData(this.result, this.quiz, this.pending, this.fromCache);
+  _ResultData(this.result, this.quiz, this.pending, this.fromCache, [this.localPending = false]);
   final QuizResult? result;
   final QuizDetail? quiz;
   final bool pending;
   final bool fromCache;
+  final bool localPending; // corrigé sur l'appareil, pas encore confirmé par le serveur
 }
 
 final Set<int> _soundPlayed = {};
@@ -448,7 +477,8 @@ class QuizResultScreen extends StatelessWidget {
   Future<_ResultData> _load(BuildContext context) async {
     final repo = context.read<CourseRepository>();
     final outbox = context.read<OutboxRepository>();
-    final pending = await outbox.isPending('quiz-submit-$attemptId');
+    final pending = await outbox.isPending('quiz-submit-$attemptId') ||
+        await outbox.isPending('quiz-offline-$attemptId');
     QuizResult? res;
     var cached = false;
     try {
@@ -469,7 +499,7 @@ class QuizResultScreen extends StatelessWidget {
         // textes des questions indisponibles
       }
     }
-    return _ResultData(res, quiz, pending && res == null, cached);
+    return _ResultData(res, quiz, pending && res == null, cached, pending && res != null);
   }
 
   @override
@@ -502,7 +532,16 @@ class QuizResultScreen extends StatelessWidget {
           }
           final byQ = {for (final x in r.details) x.questionId: x};
           return ListView(padding: const EdgeInsets.all(16), children: [
-            if (d.fromCache) const OfflineBanner(),
+            if (d.localPending)
+              const Card(
+                child: Padding(
+                  padding: EdgeInsets.all(12),
+                  child: Text('Corrigé sur votre téléphone. Le résultat sera confirmé et enregistré '
+                      'automatiquement dès le retour de la connexion.'),
+                ),
+              )
+            else if (d.fromCache)
+              const OfflineBanner(),
             HeroCard(
               child: Column(children: [
                 Icon(ok ? Icons.emoji_events_outlined : Icons.refresh_rounded,
