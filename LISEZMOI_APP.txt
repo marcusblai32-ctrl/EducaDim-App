@@ -2,3 +2,4 @@ Nouveau : écrans "Classement par points" (/ranking) et "Mes badges" (/badges), 
 Fichiers : lib/features/ranking/ranking_screen.dart (nouveau), lib/app.dart, lib/features/profile/profile_screen.dart, lib/core/i18n/strings_ht.dart.
 Nécessite le patch site (API /ranking/ et /badges/).
 Retiré : bouton « Tester les notifications » (Profil).
+Nouveau : « Pratique musicale (PPI) » (Profil) : notes de pratique PPI par cours (/ppi-progress). Fichier : lib/features/ranking/ppi_progress_screen.dart.

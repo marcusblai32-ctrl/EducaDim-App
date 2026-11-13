@@ -1,5 +1,14 @@
 /// Traductions kreyòl (clé = texte source français). Les textes absents restent en français.
 const Map<String, String> htStrings = {
+  'Pratique musicale': 'Pratik mizik',
+  'Pratique musicale (PPI)': 'Pratik mizik (PPI)',
+  'Aucune pratique pour le moment': 'Poko gen pratik',
+  'Ouvrez l’application PPI et terminez un exercice : vos notes apparaîtront ici.': 'Louvri aplikasyon PPI a epi fini yon egzèsis : nòt ou yo ap parèt la.',
+  'Précision moyenne': 'Presizyon mwayèn',
+  'Exercices réussis': 'Egzèsis reyisi',
+  'Temps de pratique': 'Tan pratik',
+  '{a}/{b} exercices réussis · précision {p} %': '{a}/{b} egzèsis reyisi · presizyon {p} %',
+  '{n} essai(s)': '{n} eseye',
   'Classement': 'Klasman',
   'Classement par points': 'Klasman selon pwen',
   'Mes badges': 'Badj mwen yo',
