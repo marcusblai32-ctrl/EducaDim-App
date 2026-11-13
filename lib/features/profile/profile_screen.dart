@@ -76,6 +76,8 @@ class ProfileScreen extends StatelessWidget {
         _Item(Icons.local_fire_department_rounded, 'Mon rythme d’étude', () => context.push('/study/plan'),
             subtitle: study.hasPlan ? tr('{n} jour(s) par semaine', {'n': study.weekdays.length}) : null),
         _Item(Icons.leaderboard_rounded, 'Classement des séries', () => context.push('/leaderboard')),
+        _Item(Icons.emoji_events_rounded, 'Classement par points', () => context.push('/ranking')),
+        _Item(Icons.military_tech_rounded, 'Mes badges', () => context.push('/badges')),
         _Item(Icons.workspace_premium_rounded, 'Mes certificats', () => context.push('/certificates')),
         _Item(Icons.download_for_offline_rounded, 'Téléchargements', () => context.push('/downloads')),
         _Item(Icons.forum_rounded, 'Discussions', () => context.push('/chat')),
@@ -219,14 +221,19 @@ class _SoundSwitchState extends State<_SoundSwitch> {
             if (mounted) setState(() {});
           },
         ),
-        FutureBuilder<String>(
-          future: AlertService.instance.statusLine(),
-          builder: (context, snap) => Align(
-            alignment: Alignment.centerLeft,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Text(snap.data ?? '…', style: Theme.of(context).textTheme.bodySmall),
-            ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            icon: const Icon(Icons.notifications_active_outlined),
+            label: Text(tr('Tester les notifications')),
+            onPressed: () async {
+              final msg = ScaffoldMessenger.of(context);
+              final err = await AlertService.instance
+                  .notify(tr('EducaDim'), tr('Les notifications fonctionnent sur cet appareil.'));
+              if (err != null) {
+                msg.showSnackBar(snackBarAnimationStyle: AnimationStyle.noAnimation, SnackBar(content: Text(err)));
+              }
+            },
           ),
         ),
       ]);

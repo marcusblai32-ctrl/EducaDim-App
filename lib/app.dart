@@ -22,6 +22,7 @@ import 'features/downloads/downloads_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/notifications/notifications_screen.dart';
 import 'features/profile/profile_screen.dart';
+import 'features/ranking/ranking_screen.dart';
 import 'features/shell/app_shell.dart';
 import 'features/study/study_screens.dart';
 import 'features/study/study_service.dart';
@@ -64,6 +65,8 @@ GoRouter buildRouter(AuthController auth, StudyService study) => GoRouter(
               title: st.extra is String ? st.extra as String : null),
         ),
         GoRoute(path: '/certificates', builder: (_, __) => const CertificatesScreen()),
+        GoRoute(path: '/ranking', builder: (_, __) => const RankingScreen()),
+        GoRoute(path: '/badges', builder: (_, __) => const BadgesScreen()),
         GoRoute(path: '/admin', builder: (_, __) => const AdminHomeScreen()),
         GoRoute(path: '/admin/course/new', builder: (_, __) => const AdminCourseFormScreen()),
         GoRoute(
