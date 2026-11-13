@@ -459,4 +459,6 @@ const Map<String, String> htStrings = {
   'Document': 'Dokiman',
   'Accès expiré. Renouvelez votre abonnement dans les 3 jours, sinon ce cours sera supprimé de cet appareil.': 'Aksè a fini. Renouvle abònman ou nan 3 jou, sinon kou sa a ap efase sou aparèy sa a.',
   '{b} · Protégé, lisible seulement dans EducaDim': '{b} · Pwoteje, ou ka li l sèlman andedan EducaDim',
+  'Ou choisir un abonnement': 'Oswa chwazi yon abonman',
+  'tous les cours': 'tout kou yo',
 };

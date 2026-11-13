@@ -68,6 +68,17 @@ class CourseRepository {
     }
   }
 
+  /// Abonnements qui contiennent ce cours (liste vide = pas d'option abonnement).
+  Future<List<CoursePlan>> plans(int courseId) async {
+    try {
+      final r = await _api.dio.get('courses/$courseId/plans/');
+      final list = (r.data is Map ? r.data['plans'] : null) as List? ?? const [];
+      return list.map((e) => CoursePlan.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+    } on DioException catch (e) {
+      throw mapDio(e);
+    }
+  }
+
   Future<Loaded<CourseDetail>> detail(int id) =>
       _get('courses/$id/', 'course:$id', CourseDetail.fromJson);
 
@@ -155,4 +166,42 @@ class CourseRepository {
       _get('lessons/$id/', 'lesson:$id', Lesson.fromJson);
 
   Future<Curriculum> curriculumFromJson(dynamic json) async => Curriculum.fromJson(json);
+}
+
+class CoursePlan {
+  CoursePlan({
+    required this.id,
+    required this.name,
+    required this.price,
+    required this.free,
+    required this.durationDays,
+    required this.maxCourses,
+    required this.subscribeUrl,
+  });
+  final int id;
+  final String name;
+  final double price;
+  final bool free;
+  final int durationDays;
+  final int maxCourses;
+  final String subscribeUrl;
+
+  factory CoursePlan.fromJson(Map<String, dynamic> j) => CoursePlan(
+        id: (j['id'] as num).toInt(),
+        name: '${j['name'] ?? ''}',
+        price: ((j['price'] ?? 0) as num).toDouble(),
+        free: j['free'] == true,
+        durationDays: ((j['duration_days'] ?? 0) as num).toInt(),
+        maxCourses: ((j['max_courses'] ?? 0) as num).toInt(),
+        subscribeUrl: '${j['subscribe_url'] ?? ''}',
+      );
+
+  String get priceLabel => free ? 'Gratuit' : '${price.toStringAsFixed(price == price.roundToDouble() ? 0 : 2)} HTG';
+
+  String get durationLabel {
+    if (durationDays >= 365 && durationDays % 365 == 0) return '${durationDays ~/ 365} an';
+    if (durationDays >= 30 && durationDays % 30 == 0) return '${durationDays ~/ 30} mois';
+    if (durationDays % 7 == 0) return '${durationDays ~/ 7} sem.';
+    return '$durationDays j';
+  }
 }

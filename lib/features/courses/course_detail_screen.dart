@@ -165,6 +165,7 @@ class _Body extends StatelessWidget {
                         onPressed: () => _openSite(context, '${ApiConfig.siteUrl}/fr/inscriptions/enroll/${c.id}/'),
                         child: const Text('S’inscrire et payer sur le site'),
                       ),
+                    if (c.estPayant) _PlansBox(courseId: c.id),
                   ]),
                 ),
               )
@@ -216,6 +217,54 @@ class _Body extends StatelessWidget {
           ]),
         ),
       ]),
+    );
+  }
+}
+
+/// Options d'abonnement pour ce cours. N'apparaît que si au moins un plan actif contient le cours.
+class _PlansBox extends StatefulWidget {
+  const _PlansBox({required this.courseId});
+  final int courseId;
+  @override
+  State<_PlansBox> createState() => _PlansBoxState();
+}
+
+class _PlansBoxState extends State<_PlansBox> {
+  late final Future<List<CoursePlan>> _f = context.read<CourseRepository>().plans(widget.courseId);
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    return FutureBuilder<List<CoursePlan>>(
+      future: _f,
+      builder: (context, snap) {
+        final plans = snap.data;
+        if (plans == null || plans.isEmpty) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.only(top: 16),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Icon(Icons.workspace_premium_outlined, color: t.colorScheme.primary),
+              const SizedBox(width: 8),
+              Text(tr('Ou choisir un abonnement'), style: t.textTheme.titleSmall),
+            ]),
+            const SizedBox(height: 8),
+            for (final p in plans)
+              Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ListTile(
+                  dense: true,
+                  title: Text(p.name, style: const TextStyle(fontWeight: FontWeight.w700)),
+                  subtitle: Text(p.maxCourses > 0
+                      ? '${p.durationLabel} · ${p.maxCourses} ${p.maxCourses > 1 ? 'cours' : 'cours'}'
+                      : '${p.durationLabel} · ${tr('tous les cours')}'),
+                  trailing: Text(p.priceLabel, style: TextStyle(fontWeight: FontWeight.w800, color: t.colorScheme.primary)),
+                  onTap: () => _openSite(context, p.subscribeUrl),
+                ),
+              ),
+          ]),
+        );
+      },
     );
   }
 }
