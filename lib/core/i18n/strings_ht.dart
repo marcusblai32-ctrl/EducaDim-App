@@ -474,4 +474,12 @@ const Map<String, String> htStrings = {
   'Pour un numéro haïtien, les 8 chiffres suffisent.': 'Pou yon nimewo ayisyen, 8 chif yo ase.',
   'Écrivez votre numéro de téléphone.': 'Ekri nimewo telefòn ou.',
   'Numéro enregistré. Merci !': 'Nimewo a anrejistre. Mèsi!',
+  'Affichage': 'Afichaj',
+  'Options': 'Opsyon',
+  'Aide': 'Èd',
+  'Système': 'Sistèm',
+  'Taille normale du texte': 'Gwosè nòmal tèks la',
+  'Site web EducaDim': 'Sit entènèt EducaDim',
+  'À propos': 'Konsènan',
+  'Plan d’étude': 'Plan etid',
 };

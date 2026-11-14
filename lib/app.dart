@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'core/i18n/lang.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
+import 'core/widgets/desktop_menu.dart';
 import 'features/auth/auth_controller.dart';
 import 'features/auth/login_screen.dart';
 import 'features/admin/admin_screens.dart';
@@ -161,8 +162,9 @@ class _EducaDimAppState extends State<EducaDimApp> {
           GlobalCupertinoLocalizations.delegate,
         ],
         routerConfig: _router,
-        builder: (context, child) =>
-            KeyedSubtree(key: ValueKey(Lang.instance.code), child: child ?? const SizedBox.shrink()),
+        builder: (context, child) => KeyedSubtree(
+            key: ValueKey(Lang.instance.code),
+            child: DesktopMenuFrame(router: _router, child: child ?? const SizedBox.shrink())),
       ),
     );
   }

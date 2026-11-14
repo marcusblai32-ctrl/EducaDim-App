@@ -11,6 +11,7 @@ import 'core/i18n/lang.dart';
 import 'core/db/cache_store.dart';
 import 'core/db/outbox_repository.dart';
 import 'core/db/user_data_guard.dart';
+import 'core/platform/desktop_init.dart';
 import 'core/network/api_client.dart';
 import 'core/storage/token_store.dart';
 import 'core/sync/pulse_service.dart';
@@ -32,6 +33,7 @@ import 'features/study/study_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initDesktop(); // Windows : SQLite via FFI (sans effet sur téléphone)
   final prefs = await SharedPreferences.getInstance();
   await Lang.instance.init(prefs);
   await AlertService.instance.init(prefs);
