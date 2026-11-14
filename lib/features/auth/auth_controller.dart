@@ -57,6 +57,24 @@ class AuthController extends ChangeNotifier {
     } catch (_) {}
   }
 
+  /// Le compte a-t-il déjà un numéro de téléphone ?
+  bool get hasPhone => ((user?['phone_number'] as String?) ?? '').trim().isNotEmpty;
+
+  /// Enregistre le numéro de téléphone (POST me/phone/). Retourne null si tout va bien, sinon le message d'erreur.
+  Future<String?> savePhone(String number) async {
+    try {
+      final res = await api.dio.post('me/phone/', data: {'phone_number': number.trim()});
+      if (res.data is Map) {
+        user = Map<String, dynamic>.from(res.data as Map);
+        await _cache.put('me', user);
+        notifyListeners();
+      }
+      return null;
+    } catch (e) {
+      return ApiException.from(e).message;
+    }
+  }
+
   /// Défi de vérification en deux étapes en attente : {challenge_id, channel, target}.
   Map<String, dynamic>? pending2fa;
 

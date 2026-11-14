@@ -468,4 +468,10 @@ const Map<String, String> htStrings = {
   'Réduire le texte': 'Fè tèks la pi piti',
   'Agrandir le texte': 'Fè tèks la pi gwo',
   'Connexion au serveur à finaliser': 'Koneksyon ak sèvè a poko fini',
+  'Ajoutez votre numéro de téléphone': 'Ajoute nimewo telefòn ou',
+  'Nous vous préviendrons par SMS : inscription confirmée, paiement vérifié, abonnement.': 'N ap avèti w pa SMS: enskripsyon konfime, peman verifye, abonman.',
+  'Numéro de téléphone': 'Nimewo telefòn',
+  'Pour un numéro haïtien, les 8 chiffres suffisent.': 'Pou yon nimewo ayisyen, 8 chif yo ase.',
+  'Écrivez votre numéro de téléphone.': 'Ekri nimewo telefòn ou.',
+  'Numéro enregistré. Merci !': 'Nimewo a anrejistre. Mèsi!',
 };

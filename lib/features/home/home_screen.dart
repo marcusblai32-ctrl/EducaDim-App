@@ -8,6 +8,7 @@ import '../../core/sync/sync_service.dart';
 import '../../core/theme/colors.dart';
 import '../../core/widgets/common.dart';
 import '../auth/auth_controller.dart';
+import '../profile/phone_prompt.dart';
 import '../courses/course_repository.dart';
 import '../study/study_screens.dart' show StreakCard;
 import '../study/study_service.dart';
@@ -35,6 +36,15 @@ class _HomeScreenState extends State<HomeScreen> {
   // Les requêtes sont lancées une seule fois (pas à chaque reconstruction) : économie de données.
   late final Future<Loaded<CoursePage>> _catalog = context.read<CourseRepository>().catalog();
   late final Future<SharedPreferences> _prefs = SharedPreferences.getInstance();
+
+  @override
+  void initState() {
+    super.initState();
+    // Compte sans numéro de téléphone : on le demande de temps en temps (voir phone_prompt.dart).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) maybeAskPhone(context);
+    });
+  }
 
   Future<void> _refresh() async {
     await context.read<CourseRepository>().catalog();

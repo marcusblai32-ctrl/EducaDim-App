@@ -65,6 +65,14 @@ class AppShell extends StatelessWidget {
         ],
       ),
       body: child,
+      // Bouton flottant : les messages du professeur (tous les cours), toujours à portée de main.
+      floatingActionButton: FloatingActionButton(
+        heroTag: null,
+        shape: const CircleBorder(),
+        tooltip: tr('Messages du professeur'),
+        onPressed: () => context.push('/messages'),
+        child: const Icon(Icons.mark_email_unread_outlined),
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: idx,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
