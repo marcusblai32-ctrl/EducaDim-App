@@ -28,6 +28,7 @@ class OfflineCourseService extends ChangeNotifier {
   int progressDone = 0, progressTotal = 0;
   /// Nombre de fichiers médias qui n'ont pas pu être téléchargés au dernier essai.
   int mediaMissing = 0;
+  int mediaTotal = 0;
 
   bool isOffline(int courseId) => courses.any((c) => c.courseId == courseId);
 
@@ -93,6 +94,7 @@ class OfflineCourseService extends ChangeNotifier {
       // Images / audio / PDF / vidéo : téléchargement réel des fichiers.
       progressDone = 0;
       progressTotal = media.length;
+      mediaTotal = media.length;
       notifyListeners();
       var mediaFailed = 0;
       for (final e in media.entries) {

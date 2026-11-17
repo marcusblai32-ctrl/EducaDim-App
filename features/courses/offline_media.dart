@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import '../../core/widgets/net_image.dart' show kImageHeaders;
 import 'models.dart';
@@ -46,10 +47,22 @@ class OfflineMedia {
   /// Télécharge [url] ; renvoie true si le fichier est (déjà) en cache.
   static Future<bool> prefetch(String url, String type) async {
     try {
-      if (type == 'image') {
-        await DefaultCacheManager().downloadFile(url, authHeaders: kImageHeaders);
-      } else {
-        await OfflineMediaCache.instance.downloadFile(url);
+      final mgr = type == 'image' ? DefaultCacheManager() : OfflineMediaCache.instance;
+      final info = type == 'image'
+          ? await mgr.downloadFile(url, authHeaders: kImageHeaders, force: true)
+          : await mgr.downloadFile(url, force: true);
+      // Vérifie que c'est bien un fichier (et pas une page HTML d'erreur / Cloudflare).
+      final f = info.file;
+      final len = await f.length();
+      if (len < 50) {
+        await mgr.removeFile(url);
+        return false;
+      }
+      final head = await f.openRead(0, 16).first;
+      final isHtml = head.isNotEmpty && (head[0] == 0x3C /* < */ || head[0] == 0x7B /* { */);
+      if (isHtml) {
+        await mgr.removeFile(url);
+        return false;
       }
       return true;
     } catch (_) {
