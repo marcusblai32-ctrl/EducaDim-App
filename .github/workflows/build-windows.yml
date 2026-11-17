@@ -24,12 +24,10 @@ jobs:
           if [ ! -d windows ]; then
             flutter create --platforms=windows --project-name educadim --org com.dimensionproduction .
           fi
-          # SQLite via FFI : fichier propre à Windows + dépendances ajoutées seulement dans ce build
           cp tool/windows/desktop_init.dart.txt lib/core/platform/desktop_init.dart
           flutter pub add sqflite_common_ffi sqlite3_flutter_libs || flutter pub add sqflite_common_ffi
           flutter pub get
           if [ -f test/widget_test.dart ] && grep -q "MyApp" test/widget_test.dart; then rm -f test/widget_test.dart; fi
-          # Titre et taille de la fenêtre
           sed -i 's/L"educadim"/L"EducaDim"/' windows/runner/main.cpp
           sed -i 's/Size size(1280, 720)/Size size(1280, 800)/' windows/runner/main.cpp
 
@@ -40,6 +38,8 @@ jobs:
           python tool/windows_icon.py
 
       - name: Compilation
+        env:
+          CL: /D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS /D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
         run: flutter build windows --release
 
       - name: Bibliothèques nécessaires sur un PC sans Visual C++
@@ -76,8 +76,3 @@ jobs:
           files: |
             dist/EducaDim-Windows.zip
             dist/EducaDim-Setup.exe
-
-      - name: Build Windows
-        env:
-          CL: /D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS
-        run: flutter build windows --release
