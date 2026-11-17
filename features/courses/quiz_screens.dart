@@ -69,10 +69,14 @@ class QuizListScreen extends StatelessWidget {
                                     : '')
                             : tr('Contient des questions audio/vidéo/fichier : à passer sur le site.'),
                       ),
-                      trailing: q.compatible
+                      trailing: (q.passed && q.passedAttemptId != null)
+                          ? Text(tr('Voir résultat'), style: const TextStyle(fontWeight: FontWeight.w600))
+                          : q.compatible
                           ? const Icon(Icons.chevron_right)
                           : const Icon(Icons.open_in_new),
-                      onTap: () => q.compatible
+                      onTap: () => (q.passed && q.passedAttemptId != null)
+                          ? context.push('/quiz-result/${q.passedAttemptId}')
+                          : q.compatible
                           ? context.push('/quiz/${q.id}')
                           : launchUrl(Uri.parse(ApiConfig.siteUrl),
                               mode: LaunchMode.externalApplication),
