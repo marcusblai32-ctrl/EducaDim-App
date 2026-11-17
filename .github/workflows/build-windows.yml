@@ -76,3 +76,8 @@ jobs:
           files: |
             dist/EducaDim-Windows.zip
             dist/EducaDim-Setup.exe
+
+      - name: Build Windows
+        env:
+          CL: /D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS
+        run: flutter build windows --release
