@@ -4,6 +4,7 @@ import '../../core/db/cache_store.dart';
 import '../../core/network/api_exception.dart';
 import 'course_repository.dart';
 import 'models.dart';
+import 'offline_media.dart';
 
 class OfflineCourse {
   OfflineCourse(this.courseId, this.title, this.lessons, this.skipped, this.createdAt);
@@ -29,6 +30,8 @@ class OfflineCourseService extends ChangeNotifier {
   List<OfflineCourse> courses = [];
   int? busyCourseId;
   int progressDone = 0, progressTotal = 0;
+  /// Fichiers médias (images, audio, PDF, vidéo) : total et échecs du dernier téléchargement.
+  int mediaTotal = 0, mediaMissing = 0;
 
   bool isOffline(int courseId) => courses.any((c) => c.courseId == courseId);
 
@@ -57,10 +60,14 @@ class OfflineCourseService extends ChangeNotifier {
       final cur = await _repo.curriculum(courseId);
       final lessons = cur.value.allLessons;
       progressTotal = lessons.length;
+      final media = <String, String>{}; // url -> type
       var skipped = 0;
       for (final l in lessons) {
         try {
-          await _repo.lesson(l.id);
+          final ls = await _repo.lesson(l.id);
+          for (final m in OfflineMedia.urlsOfLesson(ls.value)) {
+            media[m.url] = m.type;
+          }
         } on LessonQuizRequired {
           skipped++; // leçon verrouillée par un quiz à réussir
         }
@@ -76,12 +83,30 @@ class OfflineCourseService extends ChangeNotifier {
       try {
         final qs = await _repo.quizzes(courseId);
         for (final q in qs.value.where((q) => q.compatible)) {
-          await _repo.quiz(q.id);
+          final qd = await _repo.quiz(q.id);
+          for (final u in OfflineMedia.urlsOfQuiz(qd.value)) {
+            media[u] = 'image';
+          }
           try {
-            await _repo.downloadQuizPack(q.id); // bonnes réponses : correction hors ligne
+            final pack = await _repo.downloadQuizPack(q.id); // bonnes réponses : correction hors ligne
+            for (final u in OfflineMedia.urlsOfQuiz(pack)) {
+              media[u] = 'image';
+            }
           } catch (_) {}
         }
       } catch (_) {} // endpoint absent ou cours sans quiz
+      // Téléchargement réel des fichiers médias (images, audio, PDF, vidéo).
+      progressDone = 0;
+      progressTotal = media.length;
+      mediaTotal = media.length;
+      notifyListeners();
+      var mediaFailed = 0;
+      for (final e in media.entries) {
+        if (!await OfflineMedia.prefetch(e.key, e.value)) mediaFailed++;
+        progressDone++;
+        notifyListeners();
+      }
+      mediaMissing = mediaFailed;
       await _db.db.rawInsert(
         'INSERT OR REPLACE INTO offline_courses(course_id,title,lessons,skipped,created_at,access_until) VALUES(?,?,?,?,?,?)',
         [courseId, title, lessons.length - skipped, skipped, DateTime.now().millisecondsSinceEpoch, until],
@@ -124,6 +149,19 @@ class OfflineCourseService extends ChangeNotifier {
   }
 
   Future<void> remove(int courseId) async {
+    final cur = await _cache.get('curriculum:$courseId');
+    if (cur != null) {
+      try {
+        for (final l in (await _repo.curriculumFromJson(cur)).allLessons) {
+          final lc = await _cache.get('lesson:${l.id}');
+          if (lc != null) {
+            for (final m in OfflineMedia.urlsOfLesson(Lesson.fromJson(lc))) {
+              await OfflineMedia.evict(m.url);
+            }
+          }
+        }
+      } catch (_) {}
+    }
     for (final k in await cacheKeysFor(courseId)) {
       await _cache.delete(k);
     }

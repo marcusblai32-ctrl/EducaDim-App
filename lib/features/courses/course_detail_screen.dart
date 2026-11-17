@@ -189,8 +189,13 @@ class _Body extends StatelessWidget {
                             msg.showSnackBar(snackBarAnimationStyle: AnimationStyle.noAnimation, SnackBar(content: Text(tr('Téléchargement supprimé.'))));
                           } else {
                             await offline.download(c.id, c.titre);
+                            final okM = offline.mediaTotal - offline.mediaMissing;
                             msg.showSnackBar(snackBarAnimationStyle: AnimationStyle.noAnimation, SnackBar(
-                                content: Text(tr('Cours disponible hors ligne (textes et structure).'))));
+                                duration: const Duration(seconds: 8),
+                                content: Text(offline.mediaTotal == 0
+                                    ? 'Cours disponible hors ligne. Aucun fichier média trouvé dans ce cours.'
+                                    : 'Cours disponible hors ligne. Médias : $okM/${offline.mediaTotal} téléchargés'
+                                        '${offline.mediaMissing > 0 ? ' (${offline.mediaMissing} échec)' : ''}.')));
                           }
                         } catch (e) {
                           msg.showSnackBar(snackBarAnimationStyle: AnimationStyle.noAnimation, SnackBar(content: Text(ApiException.from(e).message)));
