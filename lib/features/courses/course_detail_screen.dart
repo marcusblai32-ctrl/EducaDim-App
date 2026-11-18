@@ -10,6 +10,7 @@ import '../../core/theme/colors.dart';
 import '../../core/widgets/async_view.dart';
 import '../../core/widgets/common.dart';
 import '../../core/widgets/net_image.dart';
+import '../chat/chat_controller.dart';
 import 'course_repository.dart';
 import 'course_widgets.dart';
 import 'models.dart';
@@ -165,7 +166,6 @@ class _Body extends StatelessWidget {
                         onPressed: () => _openSite(context, '${ApiConfig.siteUrl}/fr/inscriptions/enroll/${c.id}/'),
                         child: const Text('S’inscrire et payer sur le site'),
                       ),
-                    if (c.estPayant) _PlansBox(courseId: c.id),
                   ]),
                 ),
               )
@@ -189,13 +189,8 @@ class _Body extends StatelessWidget {
                             msg.showSnackBar(snackBarAnimationStyle: AnimationStyle.noAnimation, SnackBar(content: Text(tr('Téléchargement supprimé.'))));
                           } else {
                             await offline.download(c.id, c.titre);
-                            final okM = offline.mediaTotal - offline.mediaMissing;
                             msg.showSnackBar(snackBarAnimationStyle: AnimationStyle.noAnimation, SnackBar(
-                                duration: const Duration(seconds: 8),
-                                content: Text(offline.mediaTotal == 0
-                                    ? 'Cours disponible hors ligne. Aucun fichier média trouvé dans ce cours.'
-                                    : 'Cours disponible hors ligne. Médias : $okM/${offline.mediaTotal} téléchargés'
-                                        '${offline.mediaMissing > 0 ? ' (${offline.mediaMissing} échec)' : ''}.')));
+                                content: Text(tr('Cours disponible hors ligne (textes et structure).'))));
                           }
                         } catch (e) {
                           msg.showSnackBar(snackBarAnimationStyle: AnimationStyle.noAnimation, SnackBar(content: Text(ApiException.from(e).message)));
@@ -203,8 +198,20 @@ class _Body extends StatelessWidget {
                       },
               ),
               const SizedBox(height: 10),
-              _Action(Icons.mark_email_unread_outlined, 'Messages du professeur', 'Messages, corrections et lien WhatsApp du cours',
-                  () => GoRouter.of(context).push('/messages/${c.id}')),
+              _Action(Icons.forum_outlined, 'Discussion du cours', 'Échangez avec les autres apprenants',
+                  () async {
+                final msg = ScaffoldMessenger.of(context);
+                final nav = GoRouter.of(context);
+                try {
+                  final id = await context.read<ChatController>().openCourseRoom(c.id);
+                  nav.push('/chat/$id', extra: '${tr('Groupe')} - ${c.titre}');
+                } on ApiException catch (e) {
+                  msg.showSnackBar(snackBarAnimationStyle: AnimationStyle.noAnimation, SnackBar(
+                      content: Text(e.isOffline
+                          ? tr('Connexion requise pour ouvrir la discussion.')
+                          : e.message)));
+                }
+              }),
               if (d.quizzesCount > 0) ...[
                 const SizedBox(height: 10),
                 _Action(Icons.quiz_outlined, 'Quiz', tr('{n} quiz disponible(s)', {'n': d.quizzesCount}),
@@ -222,54 +229,6 @@ class _Body extends StatelessWidget {
           ]),
         ),
       ]),
-    );
-  }
-}
-
-/// Options d'abonnement pour ce cours. N'apparaît que si au moins un plan actif contient le cours.
-class _PlansBox extends StatefulWidget {
-  const _PlansBox({required this.courseId});
-  final int courseId;
-  @override
-  State<_PlansBox> createState() => _PlansBoxState();
-}
-
-class _PlansBoxState extends State<_PlansBox> {
-  late final Future<List<CoursePlan>> _f = context.read<CourseRepository>().plans(widget.courseId);
-
-  @override
-  Widget build(BuildContext context) {
-    final t = Theme.of(context);
-    return FutureBuilder<List<CoursePlan>>(
-      future: _f,
-      builder: (context, snap) {
-        final plans = snap.data;
-        if (plans == null || plans.isEmpty) return const SizedBox.shrink();
-        return Padding(
-          padding: const EdgeInsets.only(top: 16),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Icon(Icons.workspace_premium_outlined, color: t.colorScheme.primary),
-              const SizedBox(width: 8),
-              Text(tr('Ou choisir un abonnement'), style: t.textTheme.titleSmall),
-            ]),
-            const SizedBox(height: 8),
-            for (final p in plans)
-              Card(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: ListTile(
-                  dense: true,
-                  title: Text(p.name, style: const TextStyle(fontWeight: FontWeight.w700)),
-                  subtitle: Text(p.maxCourses > 0
-                      ? '${p.durationLabel} · ${p.maxCourses} ${p.maxCourses > 1 ? 'cours' : 'cours'}'
-                      : '${p.durationLabel} · ${tr('tous les cours')}'),
-                  trailing: Text(p.priceLabel, style: TextStyle(fontWeight: FontWeight.w800, color: t.colorScheme.primary)),
-                  onTap: () => _openSite(context, p.subscribeUrl),
-                ),
-              ),
-          ]),
-        );
-      },
     );
   }
 }
@@ -351,23 +310,12 @@ class _CurriculumCardState extends State<_CurriculumCard> {
                       const SizedBox(height: 16),
                       Text(u.titre, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
                       for (final m in u.modules) ...[
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Row(children: [
-                            Expanded(
-                              child: Text(m.titre,
-                                  style: TextStyle(color: t.colorScheme.primary, fontWeight: FontWeight.w700)),
-                            ),
-                            if (fc != null && fc.countFor(m.id) > 0)
-                              TextButton.icon(
-                                style: TextButton.styleFrom(
-                                    visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 8)),
-                                icon: const Icon(Icons.style_outlined, size: 18),
-                                label: Text(tr('Flashcards ({n})', {'n': fc.countFor(m.id)})),
-                                onPressed: () => context.push('/module-flashcards/${m.id}', extra: m.titre),
-                              ),
-                          ]),
-                        ),
+                        if (m.titre.trim() != u.titre.trim())
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(m.titre,
+                                style: TextStyle(color: t.colorScheme.primary, fontWeight: FontWeight.w700)),
+                          ),
                         for (final l in m.lecons)
                           ListTile(
                             contentPadding: EdgeInsets.zero,
@@ -377,6 +325,38 @@ class _CurriculumCardState extends State<_CurriculumCard> {
                             title: Text(l.titre),
                             trailing: const Icon(Icons.chevron_right_rounded),
                             onTap: () => context.push('/lesson/${l.id}'),
+                          ),
+                        if (fc != null && fc.countFor(m.id) > 0)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 6, bottom: 4),
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(12),
+                              onTap: () => context.push('/module-flashcards/${m.id}', extra: m.titre),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: t.dividerColor),
+                                ),
+                                child: Row(children: [
+                                  Icon(Icons.style_outlined, size: 20, color: t.colorScheme.primary),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(tr('Réviser avec les flashcards'),
+                                        style: const TextStyle(fontWeight: FontWeight.w600)),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                        color: t.colorScheme.primary.withOpacity(0.12), borderRadius: BorderRadius.circular(20)),
+                                    child: Text('${fc.countFor(m.id)}',
+                                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: t.colorScheme.primary)),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Icon(Icons.chevron_right_rounded),
+                                ]),
+                              ),
+                            ),
                           ),
                       ],
                     ],
