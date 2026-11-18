@@ -10,7 +10,6 @@ import '../../core/theme/colors.dart';
 import '../../core/widgets/async_view.dart';
 import '../../core/widgets/common.dart';
 import '../../core/widgets/net_image.dart';
-import '../chat/chat_controller.dart';
 import 'course_repository.dart';
 import 'course_widgets.dart';
 import 'models.dart';
@@ -189,8 +188,13 @@ class _Body extends StatelessWidget {
                             msg.showSnackBar(snackBarAnimationStyle: AnimationStyle.noAnimation, SnackBar(content: Text(tr('Téléchargement supprimé.'))));
                           } else {
                             await offline.download(c.id, c.titre);
+                            final ok = offline.mediaTotal - offline.mediaMissing;
                             msg.showSnackBar(snackBarAnimationStyle: AnimationStyle.noAnimation, SnackBar(
-                                content: Text(tr('Cours disponible hors ligne (textes et structure).'))));
+                                duration: const Duration(seconds: 8),
+                                content: Text(offline.mediaTotal == 0
+                                    ? 'Cours disponible hors ligne. Aucun fichier média trouvé dans ce cours.'
+                                    : 'Cours disponible hors ligne. Médias : $ok/${offline.mediaTotal} téléchargés'
+                                        '${offline.mediaMissing > 0 ? ' (${offline.mediaMissing} échec)' : ''}.')));
                           }
                         } catch (e) {
                           msg.showSnackBar(snackBarAnimationStyle: AnimationStyle.noAnimation, SnackBar(content: Text(ApiException.from(e).message)));
@@ -198,20 +202,8 @@ class _Body extends StatelessWidget {
                       },
               ),
               const SizedBox(height: 10),
-              _Action(Icons.forum_outlined, 'Discussion du cours', 'Échangez avec les autres apprenants',
-                  () async {
-                final msg = ScaffoldMessenger.of(context);
-                final nav = GoRouter.of(context);
-                try {
-                  final id = await context.read<ChatController>().openCourseRoom(c.id);
-                  nav.push('/chat/$id', extra: '${tr('Groupe')} - ${c.titre}');
-                } on ApiException catch (e) {
-                  msg.showSnackBar(snackBarAnimationStyle: AnimationStyle.noAnimation, SnackBar(
-                      content: Text(e.isOffline
-                          ? tr('Connexion requise pour ouvrir la discussion.')
-                          : e.message)));
-                }
-              }),
+              _Action(Icons.forum_outlined, 'Messages du professeur', 'Annonces et conseils pour ce cours',
+                  () => context.push('/messages/${c.id}')),
               if (d.quizzesCount > 0) ...[
                 const SizedBox(height: 10),
                 _Action(Icons.quiz_outlined, 'Quiz', tr('{n} quiz disponible(s)', {'n': d.quizzesCount}),
