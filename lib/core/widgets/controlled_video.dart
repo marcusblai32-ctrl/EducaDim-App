@@ -1,4 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import '../../features/courses/offline_media.dart';
 import 'package:flutter/material.dart' hide Text;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -6,7 +9,7 @@ import '../config/api_config.dart';
 import '../i18n/text.dart';
 import '../theme/colors.dart';
 
-enum VideoKind { youtube, vimeo, drive, file }
+enum VideoKind { youtube, vimeo, drive, stream, file }
 
 class VideoSource {
   VideoSource(this.kind, this.src);
@@ -54,6 +57,17 @@ class VideoSource {
 
     if (host == 'drive.google.com' && path.length >= 3 && path[0] == 'file' && path[1] == 'd') {
       return VideoSource(VideoKind.drive, 'https://drive.google.com/file/d/${path[2]}/preview');
+    }
+    // Cloudflare Stream : intégrer le lecteur officiel (la page /watch n'est pas un fichier vidéo).
+    if (host.endsWith('cloudflarestream.com') || host == 'videodelivery.net' || host == 'iframe.videodelivery.net') {
+      final idRe = RegExp(r'^(?:[0-9a-f]{32}|eyJ[A-Za-z0-9_.-]{20,})$');
+      final id = path.firstWhere((p) => idRe.hasMatch(p), orElse: () => '');
+      if (id.isNotEmpty) {
+        final src = host.endsWith('cloudflarestream.com')
+            ? 'https://${u.host}/$id/iframe'
+            : 'https://iframe.videodelivery.net/$id';
+        return VideoSource(VideoKind.stream, src);
+      }
     }
     return VideoSource(VideoKind.file, raw);
   }
@@ -164,11 +178,45 @@ class _VideoFrameState extends State<_VideoFrame> {
       onNavigationRequest: (r) {
         // Cadre principal : uniquement notre page. Les sous-cadres (le lecteur) restent libres.
         if (!r.isMainFrame) return NavigationDecision.navigate;
-        final ok = r.url.startsWith(ApiConfig.siteUrl) || r.url.startsWith('about:') || r.url.startsWith('data:');
+        final ok = r.url.startsWith(ApiConfig.siteUrl) ||
+            r.url.startsWith('about:') ||
+            r.url.startsWith('data:') ||
+            r.url.startsWith('file:');
         return ok ? NavigationDecision.navigate : NavigationDecision.prevent;
       },
-    ))
-    ..loadHtmlString(widget.source.html, baseUrl: ApiConfig.siteUrl);
+    ));
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  /// Hors ligne : si la vidéo (fichier direct) a été téléchargée avec le cours, on la lit depuis le téléphone.
+  Future<void> _load() async {
+    final s = widget.source;
+    if (s.kind == VideoKind.file) {
+      try {
+        final local = await OfflineMedia.localFile(s.src);
+        if (local != null && await File(local).exists()) {
+          final dir = await getTemporaryDirectory();
+          final page = File('${dir.path}/educadim_offline_player.html');
+          final esc = const HtmlEscape(HtmlEscapeMode.attribute).convert(Uri.file(local).toString());
+          await page.writeAsString('<!doctype html><html><head><meta charset="utf-8">'
+              '<meta name="viewport" content="width=device-width,initial-scale=1">'
+              '<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}'
+              'video{position:absolute;top:0;left:0;width:100%;height:100%;background:#000}</style></head>'
+              '<body oncontextmenu="return false"><video src="$esc" controls controlsList="nodownload noremoteplayback" '
+              'disablePictureInPicture playsinline preload="metadata"></video></body></html>');
+          await _c.loadFile(page.path);
+          return;
+        }
+      } catch (_) {
+        // on retombe sur la lecture en ligne
+      }
+    }
+    await _c.loadHtmlString(s.html, baseUrl: ApiConfig.siteUrl);
+  }
 
   @override
   Widget build(BuildContext context) => WebViewWidget(controller: _c);
