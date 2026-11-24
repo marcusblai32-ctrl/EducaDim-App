@@ -207,7 +207,8 @@ class _VideoFrameState extends State<_VideoFrame> {
         } catch (_) {}
       }
     }
-    final c = WebViewController()
+    late final WebViewController c;
+    c = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(Colors.black)
       ..setNavigationDelegate(NavigationDelegate(
