@@ -9,6 +9,7 @@ import '../../core/audio/sfx.dart';
 import '../../core/config/api_config.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/theme/colors.dart';
+import '../../core/widgets/audio_player.dart';
 import '../../core/widgets/controlled_video.dart';
 import '../../core/widgets/image_viewer.dart';
 import '../../core/widgets/common.dart';
@@ -18,6 +19,7 @@ import '../downloads/download_service.dart';
 import 'course_repository.dart';
 import 'course_widgets.dart';
 import 'models.dart';
+import 'online_pdf_screen.dart';
 import 'progress_service.dart';
 
 const kLastLessonKey = 'last_lesson'; // "courseId:lessonId:titre"
@@ -115,11 +117,14 @@ class _LessonBody extends StatelessWidget {
                 title: 'Leçon sans contenu',
                 message: 'Aucun contenu n’a encore été publié pour cette leçon.')),
       const SizedBox(height: 22),
+      if (l.ppi != null && !done) _PpiRequirementCard(l.ppi!),
       FilledButton.icon(
         icon: Icon(done ? Icons.check_circle : Icons.check),
-        label: Text(done ? 'Leçon terminée' : 'Marquer comme terminée'),
+        label: Text(done
+            ? 'Leçon terminée'
+            : (l.ppi != null && !l.ppi!.met ? 'Terminez d’abord les exercices PPI' : 'Marquer comme terminée')),
         style: done ? FilledButton.styleFrom(backgroundColor: EdColors.good) : null,
-        onPressed: done
+        onPressed: done || (l.ppi != null && !l.ppi!.met)
             ? null
             : () async {
                 await progress.complete(l.id, l.courseId);
@@ -219,13 +224,14 @@ class _ContentTile extends StatelessWidget {
       );
     }
     final url = c.mainUrl;
-    if (c.type == 'image' && url != null) {
+    final kind = c.kind; // décidé par le serveur d'après le vrai fichier : n'importe quel fichier reste lisible
+    if (kind == 'image' && url != null) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 6),
         child: ZoomableNetImage(url, title: c.titre),
       );
     }
-    if (c.type == 'video' && url != null) {
+    if (kind == 'video' && url != null) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 6),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -237,39 +243,87 @@ class _ContentTile extends StatelessWidget {
         ]),
       );
     }
-    final downloadable = c.type == 'pdf'; // seuls les PDF sont téléchargés (chiffrés) ; audio et autres fichiers : en ligne
+    if (kind == 'audio' && url != null) {
+      return AudioPlayerTile(url: url, title: c.titre, mime: null);
+    }
+    if (kind == 'pdf' && url != null) {
+      // Lecture DANS l'application seulement : pas de téléchargement, pas d'ouverture dans une autre application.
+      return Card(
+        margin: const EdgeInsets.symmetric(vertical: 5),
+        child: ListTile(
+          leading: const Icon(Icons.picture_as_pdf_outlined),
+          title: Text((c.titre ?? '').isNotEmpty ? c.titre! : 'Document PDF'),
+          subtitle: Text(tr('Lire le document')),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+              builder: (_) => OnlinePdfScreen(url, title: c.titre))),
+        ),
+      );
+    }
+    if (kind == 'link' && url != null) {
+      return Card(
+        margin: const EdgeInsets.symmetric(vertical: 5),
+        child: ListTile(
+          leading: const Icon(Icons.open_in_new),
+          title: Text((c.titre ?? '').isNotEmpty ? c.titre! : 'Lien externe'),
+          onTap: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
+        ),
+      );
+    }
+    // Autre type de fichier (Word, Excel, zip…) : l'application ne peut pas l'afficher sans le rendre téléchargeable.
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 5),
       child: ListTile(
-        leading: Icon(_icons[c.type] ?? Icons.insert_drive_file_outlined),
-        title: Text((c.titre ?? '').isNotEmpty ? c.titre! : (_labels[c.type] ?? 'Ressource')),
-        subtitle: Text(_labels[c.type] ?? c.type),
-        trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-          if (downloadable && url != null)
-            IconButton(
-              tooltip: tr('Télécharger'),
-              icon: const Icon(Icons.download_outlined),
+        leading: const Icon(Icons.lock_outline),
+        title: Text((c.titre ?? '').isNotEmpty ? c.titre! : 'Fichier'),
+        subtitle: Text(tr('Ce fichier n’est pas lisible dans l’application.')),
+      ),
+    );
+  }
+}
+
+/// « Pratique PPI » : combien d'exercices il reste à finir + bouton qui ouvre l'application PPI.
+class _PpiRequirementCard extends StatelessWidget {
+  const _PpiRequirementCard(this.r);
+  final PpiRequirement r;
+
+  @override
+  Widget build(BuildContext context) {
+    final left = (r.required - r.done).clamp(0, r.required);
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Icon(r.met ? Icons.check_circle : Icons.piano_rounded, color: r.met ? EdColors.good : EdColors.blue),
+            const SizedBox(width: 8),
+            Expanded(
+                child: Text(tr('Pratique PPI : {d} / {n} exercices finis', {'d': r.done, 'n': r.required}),
+                    style: const TextStyle(fontWeight: FontWeight.w800))),
+          ]),
+          const SizedBox(height: 8),
+          LinearProgressIndicator(value: r.required == 0 ? 1 : r.done / r.required, minHeight: 8),
+          const SizedBox(height: 8),
+          Text(r.met
+              ? tr('Bravo ! Tu peux terminer la leçon.')
+              : tr('Il te reste {n} exercice(s) à finir dans PPI pour terminer cette leçon.', {'n': left}) +
+                  (r.minAccuracy > 0 ? ' ' + tr('Précision minimale : {p} %.', {'p': r.minAccuracy}) : '')),
+          if (!r.met) ...[
+            const SizedBox(height: 10),
+            FilledButton.tonalIcon(
+              icon: const Icon(Icons.piano_rounded),
+              label: Text(tr('Ouvrir PPI')),
               onPressed: () async {
-                final msg = ScaffoldMessenger.of(context);
-                try {
-                  final until = await context.read<OfflineAccess>().fetchUntil(courseId);
-                  if (!context.mounted) return;
-                  await context.read<DownloadService>().download('content-${c.id}', c.titre ?? _labels[c.type]!, url,
-                      courseId: courseId, accessUntil: until);
-                  msg.showSnackBar(snackBarAnimationStyle: AnimationStyle.noAnimation, const SnackBar(content: Text('Téléchargé pour le hors ligne.')));
-                } catch (_) {
-                  msg.showSnackBar(snackBarAnimationStyle: AnimationStyle.noAnimation, 
-                      const SnackBar(content: Text('Téléchargement impossible. Vérifiez votre connexion.')));
+                final ok = await launchUrl(Uri.parse('ppi://app/'), mode: LaunchMode.externalApplication)
+                    .catchError((_) => false);
+                if (!ok && context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(tr('Installe ou ouvre l’application PPI pour pratiquer.'))));
                 }
               },
             ),
-          IconButton(
-            tooltip: tr('Ouvrir'),
-            icon: const Icon(Icons.open_in_new),
-            onPressed: url == null
-                ? null
-                : () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
-          ),
+          ],
         ]),
       ),
     );

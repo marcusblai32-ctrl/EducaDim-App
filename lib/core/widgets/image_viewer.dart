@@ -1,6 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart' hide Text;
-import 'package:url_launcher/url_launcher.dart';
 import '../i18n/text.dart';
 import 'net_image.dart';
 
@@ -87,11 +86,6 @@ class _ImageViewerPageState extends State<ImageViewerPage> with SingleTickerProv
         foregroundColor: Colors.white,
         title: Text(widget.title ?? '', maxLines: 1, overflow: TextOverflow.ellipsis),
         actions: [
-          IconButton(
-            tooltip: tr('Ouvrir dans le navigateur'),
-            icon: const Icon(Icons.open_in_browser_rounded),
-            onPressed: () => launchUrl(Uri.parse(widget.url), mode: LaunchMode.externalApplication),
-          ),
           IconButton(
             tooltip: tr('Taille d’origine'),
             icon: const Icon(Icons.fit_screen_rounded),

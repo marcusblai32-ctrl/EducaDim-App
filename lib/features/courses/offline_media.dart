@@ -24,7 +24,7 @@ class OfflineMedia {
       for (final c in s.contenus) {
         if (c.type == 'texte' || c.type == 'lien') continue;
         for (final e in [
-          (c.imageUrl, 'image'), (c.audioUrl, 'audio'), (c.pdfUrl, 'pdf'), (c.videoUrl, 'video'),
+          (c.imageUrl, 'image'), (c.audioUrl, 'audio'), (c.pdfUrl, 'pdf'), (c.videoUrl, 'video'), (c.fichierUrl, 'file'),
         ]) {
           final u = e.$1;
           if (u != null && u.startsWith('http')) out.add((url: u, type: e.$2));
