@@ -157,19 +157,35 @@ class Curriculum {
 
 class LessonContent {
   LessonContent(this.id, this.type, this.titre, this.texte, this.videoUrl,
-      this.imageUrl, this.audioUrl, this.pdfUrl, this.lienUrl);
+      this.imageUrl, this.audioUrl, this.pdfUrl, this.lienUrl,
+      [this.fichierUrl, this.mediaUrl, this.mediaKind, this.mediaName]);
   final int id;
   final String type; // texte|video|audio|image|pdf|fichier|lien
   final String? titre, texte, videoUrl, imageUrl, audioUrl, pdfUrl, lienUrl;
+  // Nouveau : le serveur classe lui-même la ressource (media.kind = video|audio|image|pdf|file|link).
+  final String? fichierUrl, mediaUrl, mediaKind, mediaName;
+
+  /// Ce qu'il faut faire de la ressource : le serveur décide (d'après le vrai fichier), sinon le type de l'admin.
+  String get kind {
+    final k = mediaKind;
+    if (k != null && k.isNotEmpty) return k;
+    return switch (type) {
+      'video' || 'audio' || 'image' || 'pdf' => type,
+      'lien' => 'link',
+      _ => 'file',
+    };
+  }
 
   /// URL principale de la ressource selon le type.
-  String? get mainUrl => switch (type) {
+  String? get mainUrl => (mediaUrl != null && mediaUrl!.isNotEmpty) ? mediaUrl : _legacyUrl;
+
+  String? get _legacyUrl => switch (type) {
         'video' => videoUrl,
         'audio' => audioUrl,
         'image' => imageUrl,
         'pdf' => pdfUrl,
         'lien' => lienUrl,
-        _ => pdfUrl ?? audioUrl ?? videoUrl ?? imageUrl ?? lienUrl,
+        _ => fichierUrl ?? pdfUrl ?? audioUrl ?? videoUrl ?? imageUrl ?? lienUrl,
       };
 }
 
@@ -179,11 +195,26 @@ class LessonSection {
   final List<LessonContent> contenus;
 }
 
+/// Pratique PPI exigée pour terminer la leçon (donnée par le serveur : required, done, min_accuracy, met).
+class PpiRequirement {
+  PpiRequirement(this.required, this.done, this.minAccuracy, this.met);
+  final int required, done, minAccuracy;
+  final bool met;
+
+  static PpiRequirement? from(dynamic j) {
+    final m = _m(j);
+    final r = _i(m, 'required');
+    if (r == null || r <= 0) return null;
+    return PpiRequirement(r, _i(m, 'done') ?? 0, _i(m, 'min_accuracy') ?? 0, _b(m, 'met'));
+  }
+}
+
 class Lesson {
-  Lesson(this.id, this.courseId, this.titre, this.description, this.contenu, this.sections);
+  Lesson(this.id, this.courseId, this.titre, this.description, this.contenu, this.sections, [this.ppi]);
   final int id, courseId;
   final String titre, description, contenu;
   final List<LessonSection> sections;
+  final PpiRequirement? ppi;
 
   factory Lesson.fromJson(dynamic j) {
     final root = _m(j);
@@ -209,10 +240,15 @@ class Lesson {
                           _s(_m(c), 'audio_url'),
                           _s(_m(c), 'pdf_url'),
                           _s(_m(c), 'lien_url'),
+                          _s(_m(c), 'fichier_url'),
+                          _s(_m(_m(c)['media']), 'url'),
+                          _s(_m(_m(c)['media']), 'kind'),
+                          _s(_m(_m(c)['media']), 'name'),
                         ))
                     .toList(),
               ))
           .toList(),
+      PpiRequirement.from(root['ppi_requirement']),
     );
   }
 }
@@ -329,12 +365,11 @@ String formatDate(DateTime? d) {
 
 class QuizSummary {
   QuizSummary(this.id, this.titre, this.description, this.niveau, this.duree,
-      this.passPct, this.questions, this.compatible, this.bestScore, this.passed, [this.passedAttemptId]);
+      this.passPct, this.questions, this.compatible, this.bestScore, this.passed);
   final int id, duree, passPct, questions;
   final String titre, description, niveau;
   final bool compatible, passed;
   final double? bestScore;
-  final int? passedAttemptId; // tentative réussie : le quiz ne se repasse plus
   static List<QuizSummary> listFromJson(dynamic j) => _l(_m(j)['quizzes'])
       .map((q) => QuizSummary(
             _i(_m(q), 'id') ?? 0,
@@ -347,7 +382,6 @@ class QuizSummary {
             _b(_m(q), 'mobile_compatible'),
             _m(q)['best_score'] is num ? (_m(q)['best_score'] as num).toDouble() : null,
             _b(_m(q), 'passed'),
-            _i(_m(q), 'passed_attempt_id'),
           ))
       .toList();
 }
