@@ -1,1 +1,3 @@
-Patch app EducaDim : fichiers PDF / audio / fichiers dans l application.
+PATCH APP EDUCADIM — lecteur PDF (3 modes, zoom, surlignage), Mes documents, contrôles audio/vidéo.
+Aucune dépendance ajoutée (ne touchez pas à pubspec.yaml). Compatible avec l'ancien serveur : si /documents/ n'existe pas encore,
+l'écran affiche une erreur simple, le reste de l'app fonctionne normalement.

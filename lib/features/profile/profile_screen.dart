@@ -81,6 +81,7 @@ class ProfileScreen extends StatelessWidget {
         _Item(Icons.military_tech_rounded, 'Mes badges', () => context.push('/badges')),
         _Item(Icons.piano_rounded, 'Pratique musicale (PPI)', () => context.push('/ppi-progress')),
         _Item(Icons.workspace_premium_rounded, 'Mes certificats', () => context.push('/certificates')),
+        _Item(Icons.menu_book_rounded, 'Mes documents', () => context.push('/documents')),
         _Item(Icons.download_for_offline_rounded, 'Téléchargements', () => context.push('/downloads')),
       ]),
       const SizedBox(height: 14),

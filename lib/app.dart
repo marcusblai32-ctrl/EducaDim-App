@@ -20,6 +20,7 @@ import 'features/courses/my_courses_screen.dart';
 import 'features/courses/models.dart' show QuizRun;
 import 'features/courses/progress_screen.dart';
 import 'features/courses/quiz_screens.dart';
+import 'features/documents/documents_screen.dart';
 import 'features/downloads/downloads_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/notifications/notifications_screen.dart';
@@ -74,6 +75,7 @@ GoRouter buildRouter(AuthController auth, StudyService study) => GoRouter(
         GoRoute(path: '/certificates', builder: (_, __) => const CertificatesScreen()),
         GoRoute(path: '/ranking', builder: (_, __) => const RankingScreen()),
         GoRoute(path: '/badges', builder: (_, __) => const BadgesScreen()),
+        GoRoute(path: '/documents', builder: (_, __) => const DocumentsScreen()),
         GoRoute(path: '/ppi-progress', builder: (_, __) => const PpiProgressScreen()),
         GoRoute(path: '/tasks', builder: (_, __) => const TasksScreen()),
         GoRoute(path: '/admin', builder: (_, __) => const AdminHomeScreen()),

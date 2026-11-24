@@ -1,7 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
-import '../../features/courses/offline_media.dart';
 import 'package:flutter/material.dart' hide Text;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -9,7 +6,7 @@ import '../config/api_config.dart';
 import '../i18n/text.dart';
 import '../theme/colors.dart';
 
-enum VideoKind { youtube, vimeo, drive, stream, file }
+enum VideoKind { youtube, vimeo, drive, file }
 
 class VideoSource {
   VideoSource(this.kind, this.src);
@@ -58,28 +55,30 @@ class VideoSource {
     if (host == 'drive.google.com' && path.length >= 3 && path[0] == 'file' && path[1] == 'd') {
       return VideoSource(VideoKind.drive, 'https://drive.google.com/file/d/${path[2]}/preview');
     }
-    // Cloudflare Stream : intégrer le lecteur officiel (la page /watch n'est pas un fichier vidéo).
-    if (host.endsWith('cloudflarestream.com') || host == 'videodelivery.net' || host == 'iframe.videodelivery.net') {
-      final idRe = RegExp(r'^(?:[0-9a-f]{32}|eyJ[A-Za-z0-9_.-]{20,})$');
-      final id = path.firstWhere((p) => idRe.hasMatch(p), orElse: () => '');
-      if (id.isNotEmpty) {
-        final src = host.endsWith('cloudflarestream.com')
-            ? 'https://${u.host}/$id/iframe'
-            : 'https://iframe.videodelivery.net/$id';
-        return VideoSource(VideoKind.stream, src);
-      }
-    }
     return VideoSource(VideoKind.file, raw);
   }
 
   String get html {
     const css = 'html,body{margin:0;height:100%;background:#000;overflow:hidden}'
-        'iframe,video{position:absolute;top:0;left:0;width:100%;height:100%;border:0;background:#000}';
+        'iframe,video{position:absolute;top:0;left:0;width:100%;height:100%;border:0;background:#000}'
+        '#bar{position:absolute;top:6px;left:6px;display:flex;gap:6px;z-index:5}'
+        '#bar button{background:rgba(0,0,0,.55);color:#fff;border:0;border-radius:14px;padding:5px 9px;font-size:12px}'
+        '#err{display:none;position:absolute;inset:0;color:#fff;font:14px sans-serif;text-align:center;padding:40% 16px 0;z-index:4}';
     final esc = const HtmlEscape(HtmlEscapeMode.attribute).convert(src);
     final body = kind == VideoKind.file
-        // Lecteur HTML5 sans téléchargement, sans menu contextuel, sans image dans l'image
-        ? '<video src="$esc" controls controlsList="nodownload noremoteplayback" disablePictureInPicture '
+        // Lecteur HTML5 sans téléchargement, avec : -10 s / +10 s, vitesse, répétition, message d'erreur clair.
+        ? '<video id="v" src="$esc" controls controlsList="nodownload noremoteplayback" disablePictureInPicture '
             'playsinline preload="metadata" oncontextmenu="return false"></video>'
+            '<div id="err"></div>'
+            '<div id="bar"><button onclick="s(-10)">⏪ 10</button><button onclick="s(10)">10 ⏩</button>'
+            '<button id="sp" onclick="sp()">1x</button><button id="lp" onclick="lp()">🔁</button></div>'
+            '<script>var v=document.getElementById("v"),R=[1,1.25,1.5,2,0.75],i=0;'
+            'function s(n){v.currentTime=Math.max(0,v.currentTime+n)}'
+            'function sp(){i=(i+1)%R.length;v.playbackRate=R[i];document.getElementById("sp").textContent=R[i]+"x"}'
+            'function lp(){v.loop=!v.loop;document.getElementById("lp").style.opacity=v.loop?1:.5}'
+            'document.getElementById("lp").style.opacity=.5;'
+            'v.addEventListener("error",function(){var e=document.getElementById("err");'
+            'e.textContent="Vidéo illisible : utilisez le format MP4 (H.264 + AAC).";e.style.display="block"});</script>'
         : '<iframe src="$esc" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" '
             'allow="autoplay; encrypted-media; picture-in-picture; fullscreen"></iframe>';
     return '<!doctype html><html><head><meta charset="utf-8">'
@@ -178,45 +177,11 @@ class _VideoFrameState extends State<_VideoFrame> {
       onNavigationRequest: (r) {
         // Cadre principal : uniquement notre page. Les sous-cadres (le lecteur) restent libres.
         if (!r.isMainFrame) return NavigationDecision.navigate;
-        final ok = r.url.startsWith(ApiConfig.siteUrl) ||
-            r.url.startsWith('about:') ||
-            r.url.startsWith('data:') ||
-            r.url.startsWith('file:');
+        final ok = r.url.startsWith(ApiConfig.siteUrl) || r.url.startsWith('about:') || r.url.startsWith('data:');
         return ok ? NavigationDecision.navigate : NavigationDecision.prevent;
       },
-    ));
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  /// Hors ligne : si la vidéo (fichier direct) a été téléchargée avec le cours, on la lit depuis le téléphone.
-  Future<void> _load() async {
-    final s = widget.source;
-    if (s.kind == VideoKind.file) {
-      try {
-        final local = await OfflineMedia.localFile(s.src);
-        if (local != null && await File(local).exists()) {
-          final dir = await getTemporaryDirectory();
-          final page = File('${dir.path}/educadim_offline_player.html');
-          final esc = const HtmlEscape(HtmlEscapeMode.attribute).convert(Uri.file(local).toString());
-          await page.writeAsString('<!doctype html><html><head><meta charset="utf-8">'
-              '<meta name="viewport" content="width=device-width,initial-scale=1">'
-              '<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}'
-              'video{position:absolute;top:0;left:0;width:100%;height:100%;background:#000}</style></head>'
-              '<body oncontextmenu="return false"><video src="$esc" controls controlsList="nodownload noremoteplayback" '
-              'disablePictureInPicture playsinline preload="metadata"></video></body></html>');
-          await _c.loadFile(page.path);
-          return;
-        }
-      } catch (_) {
-        // on retombe sur la lecture en ligne
-      }
-    }
-    await _c.loadHtmlString(s.html, baseUrl: ApiConfig.siteUrl);
-  }
+    ))
+    ..loadHtmlString(widget.source.html, baseUrl: ApiConfig.siteUrl);
 
   @override
   Widget build(BuildContext context) => WebViewWidget(controller: _c);
