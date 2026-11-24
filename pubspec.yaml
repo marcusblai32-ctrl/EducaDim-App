@@ -15,7 +15,6 @@ dependencies:
   flutter_secure_storage: ^9.2.2
   cryptography: ^2.7.0
   pdfx: ^2.9.1
-  screen_protector: ^1.4.2+1   # bloque les captures d'écran pendant la lecture d'un PDF
   sqflite: ^2.3.3
   path: ^1.9.0
   path_provider: ^2.1.3
