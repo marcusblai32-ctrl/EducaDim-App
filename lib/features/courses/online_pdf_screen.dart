@@ -2,11 +2,10 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart' hide Text;
 import 'package:pdfx/pdfx.dart';
-import 'package:screen_protector/screen_protector.dart';
 import '../../core/i18n/text.dart';
 
 /// PDF lu DANS l'application : téléchargé en mémoire seulement (rien n'est écrit sur le téléphone), sans bouton
-/// télécharger / ouvrir / partager, et captures d'écran bloquées pendant la lecture.
+/// télécharger / ouvrir / partager.
 class OnlinePdfScreen extends StatefulWidget {
   const OnlinePdfScreen(this.url, {super.key, this.title});
   final String url;
@@ -22,18 +21,7 @@ class _OnlinePdfScreenState extends State<OnlinePdfScreen> {
   @override
   void initState() {
     super.initState();
-    _protect(true);
     _load();
-  }
-
-  Future<void> _protect(bool on) async {
-    try {
-      if (on) {
-        await ScreenProtector.protectDataLeakageOn();
-      } else {
-        await ScreenProtector.protectDataLeakageOff();
-      }
-    } catch (_) {}
   }
 
   Future<void> _load() async {
@@ -54,7 +42,6 @@ class _OnlinePdfScreenState extends State<OnlinePdfScreen> {
 
   @override
   void dispose() {
-    _protect(false);
     _controller?.dispose();
     super.dispose();
   }
