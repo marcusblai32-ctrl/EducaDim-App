@@ -1,3 +1,7 @@
 PATCH APP EDUCADIM — lecteur PDF (3 modes, zoom, surlignage), Mes documents, contrôles audio/vidéo.
 Aucune dépendance ajoutée (ne touchez pas à pubspec.yaml). Compatible avec l'ancien serveur : si /documents/ n'existe pas encore,
 l'écran affiche une erreur simple, le reste de l'app fonctionne normalement.
+
+MISE À JOUR : l'application EducaDim n'avait AUCUN système de mise à jour. Il est ajouté (lib/core/update/update_banner.dart).
+Cette version est 1.1.0. Pour proposer une mise à jour plus tard : mettre kAppVersion à 1.2.0 dans ce fichier, construire l'APK,
+puis dans l'admin du site publier la version 1.2.0 (Application EducaDim, Android, lien de l'APK, Publié).

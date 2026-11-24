@@ -2,9 +2,9 @@ import 'package:flutter/material.dart' hide Text;
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/i18n/text.dart';
-import '../../core/update/app_update.dart';
 import '../../core/sync/sync_service.dart';
 import '../../core/theme/colors.dart';
+import '../../core/update/update_banner.dart';
 import '../../core/widgets/brand.dart';
 import '../../core/widgets/common.dart';
 import '../../core/widgets/language_button.dart';
@@ -65,7 +65,7 @@ class AppShell extends StatelessWidget {
           const SizedBox(width: 4),
         ],
       ),
-      body: UpdateGate(child: child),
+      body: Column(children: [const UpdateBanner(), Expanded(child: child)]),
       // Bouton flottant : les messages du professeur (tous les cours), toujours à portée de main.
       floatingActionButton: FloatingActionButton(
         heroTag: null,
