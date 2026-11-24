@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:dio/dio.dart';
@@ -7,6 +8,7 @@ import 'package:flutter/material.dart' hide Text;
 import 'package:pdfx/pdfx.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/i18n/text.dart';
+import 'offline_media.dart';
 
 /// Lecteur PDF d'EducaDim — ouvert dans une page à part, LECTURE SEULE :
 /// le fichier n'est chargé qu'en mémoire (rien n'est écrit sur le téléphone, aucun bouton télécharger/partager).
@@ -101,9 +103,19 @@ class _OnlinePdfScreenState extends State<OnlinePdfScreen> {
   // ---------- chargement ----------
   Future<void> _load() async {
     try {
-      final res = await Dio().get<List<int>>(widget.url,
-          options: Options(responseType: ResponseType.bytes, receiveTimeout: const Duration(seconds: 90)));
-      final data = res.data;
+      // Hors ligne : copie locale si le cours est téléchargé, sinon réseau (en mémoire seulement).
+      List<int>? data;
+      final local = await OfflineMedia.localFile(widget.url);
+      if (local != null) {
+        try {
+          data = await File(local).readAsBytes();
+        } catch (_) {}
+      }
+      if (data == null) {
+        final res = await Dio().get<List<int>>(widget.url,
+            options: Options(responseType: ResponseType.bytes, receiveTimeout: const Duration(seconds: 90)));
+        data = res.data;
+      }
       if (data == null || data.isEmpty) {
         if (mounted) setState(() => _error = tr('Ce document est indisponible.'));
         return;

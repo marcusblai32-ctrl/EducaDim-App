@@ -1,9 +1,11 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart' hide Text;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import '../config/api_config.dart';
 import '../i18n/text.dart';
+import '../../features/courses/offline_media.dart';
 import '../theme/colors.dart';
 
 enum VideoKind { youtube, vimeo, drive, file }
@@ -61,8 +63,8 @@ class VideoSource {
   String get html {
     const css = 'html,body{margin:0;height:100%;background:#000;overflow:hidden}'
         'iframe,video{position:absolute;top:0;left:0;width:100%;height:100%;border:0;background:#000}'
-        '#bar{position:absolute;top:6px;left:6px;display:flex;gap:6px;z-index:5}'
-        '#bar button{background:rgba(0,0,0,.55);color:#fff;border:0;border-radius:14px;padding:5px 9px;font-size:12px}'
+        '#bar{position:absolute;top:8px;left:8px;display:flex;gap:8px;z-index:5}'
+        '#bar button{display:flex;align-items:center;justify-content:center;min-width:34px;height:34px;background:rgba(15,23,42,.62);color:#fff;border:0;border-radius:17px;padding:0 8px;font:600 12px sans-serif}#bar button.on{background:#fff;color:#1b3f9c}'
         '#err{display:none;position:absolute;inset:0;color:#fff;font:14px sans-serif;text-align:center;padding:40% 16px 0;z-index:4}';
     final esc = const HtmlEscape(HtmlEscapeMode.attribute).convert(src);
     final body = kind == VideoKind.file
@@ -70,14 +72,13 @@ class VideoSource {
         ? '<video id="v" src="$esc" controls controlsList="nodownload noremoteplayback" disablePictureInPicture '
             'playsinline preload="metadata" oncontextmenu="return false"></video>'
             '<div id="err"></div>'
-            '<div id="bar"><button onclick="s(-10)">⏪ 10</button><button onclick="s(10)">10 ⏩</button>'
-            '<button id="sp" onclick="sp()">1x</button><button id="lp" onclick="lp()">🔁</button></div>'
+            '<div id="bar"><button aria-label="-10 s" onclick="s(-10)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"/><path d="M3.5 15a9 9 0 1 0 2.1-9.4L1 10"/><text x="12" y="15.2" font-size="7" font-weight="700" text-anchor="middle" fill="currentColor" stroke="none">10</text></svg></button><button aria-label="+10 s" onclick="s(10)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.5 15a9 9 0 1 1-2.1-9.4L23 10"/><text x="12" y="15.2" font-size="7" font-weight="700" text-anchor="middle" fill="currentColor" stroke="none">10</text></svg></button>'
+            '<button id="sp" onclick="sp()">1x</button><button id="lp" aria-label="Répéter" onclick="lp()"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></button></div>'
             '<script>var v=document.getElementById("v"),R=[1,1.25,1.5,2,0.75],i=0;'
             'function s(n){v.currentTime=Math.max(0,v.currentTime+n)}'
             'function sp(){i=(i+1)%R.length;v.playbackRate=R[i];document.getElementById("sp").textContent=R[i]+"x"}'
-            'function lp(){v.loop=!v.loop;document.getElementById("lp").style.opacity=v.loop?1:.5}'
-            'document.getElementById("lp").style.opacity=.5;'
-            'v.addEventListener("error",function(){var e=document.getElementById("err");'
+            'function lp(){v.loop=!v.loop;document.getElementById("lp").classList.toggle("on",v.loop)}'
+                        'v.addEventListener("error",function(){var e=document.getElementById("err");'
             'e.textContent="Vidéo illisible : utilisez le format MP4 (H.264 + AAC).";e.style.display="block"});</script>'
         : '<iframe src="$esc" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" '
             'allow="autoplay; encrypted-media; picture-in-picture; fullscreen"></iframe>';
@@ -170,21 +171,95 @@ class _VideoFrame extends StatefulWidget {
 }
 
 class _VideoFrameState extends State<_VideoFrame> {
-  late final WebViewController _c = WebViewController()
-    ..setJavaScriptMode(JavaScriptMode.unrestricted)
-    ..setBackgroundColor(Colors.black)
-    ..setNavigationDelegate(NavigationDelegate(
-      onNavigationRequest: (r) {
-        // Cadre principal : uniquement notre page. Les sous-cadres (le lecteur) restent libres.
-        if (!r.isMainFrame) return NavigationDecision.navigate;
-        final ok = r.url.startsWith(ApiConfig.siteUrl) || r.url.startsWith('about:') || r.url.startsWith('data:');
-        return ok ? NavigationDecision.navigate : NavigationDecision.prevent;
-      },
-    ))
-    ..loadHtmlString(widget.source.html, baseUrl: ApiConfig.siteUrl);
+  WebViewController? _c;
+  String? _localPath;
+  bool _pushing = false;
+  bool _failed = false;
+
+  static const _maxLocal = 150 * 1024 * 1024;
 
   @override
-  Widget build(BuildContext context) => WebViewWidget(controller: _c);
+  void initState() {
+    super.initState();
+    _init();
+  }
+
+  String _mime(String url) {
+    final u = url.toLowerCase().split('?').first;
+    if (u.endsWith('.webm')) return 'video/webm';
+    if (u.endsWith('.mov')) return 'video/quicktime';
+    if (u.endsWith('.ogv')) return 'video/ogg';
+    return 'video/mp4';
+  }
+
+  Future<void> _init() async {
+    final s = widget.source;
+    String html = s.html;
+    if (s.kind == VideoKind.file) {
+      // Copie téléchargée (cache privé de l'application) : lue hors ligne, sans réseau.
+      final p = await OfflineMedia.localFile(s.src);
+      if (p != null) {
+        try {
+          if (await File(p).length() <= _maxLocal) {
+            _localPath = p;
+            html = html.replaceFirst(RegExp(r'<video id="v" src="[^"]*"'), '<video id="v"');
+          }
+        } catch (_) {}
+      }
+    }
+    final c = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(Colors.black)
+      ..setNavigationDelegate(NavigationDelegate(
+        onNavigationRequest: (r) {
+          // Cadre principal : uniquement notre page. Les sous-cadres (le lecteur) restent libres.
+          if (!r.isMainFrame) return NavigationDecision.navigate;
+          final ok = r.url.startsWith(ApiConfig.siteUrl) || r.url.startsWith('about:') || r.url.startsWith('data:') || r.url.startsWith('blob:');
+          return ok ? NavigationDecision.navigate : NavigationDecision.prevent;
+        },
+        onPageFinished: (_) {
+          if (_localPath != null && !_pushing) _pushLocal(c);
+        },
+      ))
+      ..loadHtmlString(html, baseUrl: ApiConfig.siteUrl);
+    if (mounted) setState(() => _c = c);
+  }
+
+  /// Envoie le fichier local à la page par morceaux (le lecteur le lit depuis la mémoire : aucun fichier exposé).
+  Future<void> _pushLocal(WebViewController c) async {
+    _pushing = true;
+    RandomAccessFile? raf;
+    try {
+      final f = File(_localPath!);
+      final len = await f.length();
+      await c.runJavaScript('window.__p=[];var ld=document.createElement("div");ld.id="ld";ld.textContent="Chargement…";'
+          'ld.style.cssText="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font:14px sans-serif;z-index:3";document.body.appendChild(ld);');
+      raf = await f.open();
+      const step = 384 * 1024; // multiple de 3 : chaque morceau base64 est indépendant
+      for (var off = 0; off < len; off += step) {
+        final bytes = await raf.read(step);
+        if (!mounted) return;
+        await c.runJavaScript('(function(){var b=atob("${base64Encode(bytes)}"),u=new Uint8Array(b.length);'
+            'for(var i=0;i<b.length;i++)u[i]=b.charCodeAt(i);window.__p.push(u)})()');
+      }
+      await c.runJavaScript('(function(){var bl=new Blob(window.__p,{type:"${_mime(widget.source.src)}"});window.__p=null;'
+          'v.src=URL.createObjectURL(bl);var l=document.getElementById("ld");if(l)l.remove()})()');
+    } catch (_) {
+      if (mounted) setState(() => _failed = true);
+    } finally {
+      await raf?.close();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_failed) {
+      return const Center(child: Text('Vidéo illisible.', style: TextStyle(color: Colors.white)));
+    }
+    final c = _c;
+    if (c == null) return const ColoredBox(color: Colors.black);
+    return WebViewWidget(controller: c);
+  }
 }
 
 class _FullscreenVideo extends StatelessWidget {
